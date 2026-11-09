@@ -36,6 +36,7 @@ use Skir\Server\Facades\Skir;
 use Skir\Server\Http\Requests\SkirFormRequest;
 use Skir\Server\RegisteredProcedure;
 use Skir\Server\RequestContext;
+use Skir\Server\Routing\SkirEndpointRegistry;
 use Skir\Server\SkirContext;
 use Skir\Server\SkirServer;
 use Skir\Server\Tests\TestCase;
@@ -689,11 +690,7 @@ final class LaravelControllerDispatchTest extends TestCase
 
     private function serverFromRoute(LaravelRoute $route): SkirServer
     {
-        $server = $route->defaults['skirServer'] ?? null;
-
-        $this->assertInstanceOf(SkirServer::class, $server);
-
-        return $server;
+        return app(SkirEndpointRegistry::class)->server($route);
     }
 
     /** @param array<string, string|object|null> $parameters */

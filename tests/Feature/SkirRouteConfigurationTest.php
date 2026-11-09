@@ -17,6 +17,7 @@ use Skir\Runtime\MethodDescriptor;
 use Skir\Runtime\Type;
 use Skir\Server\Exceptions\SkirServerException;
 use Skir\Server\ProcedureProvider;
+use Skir\Server\Routing\SkirEndpointRegistry;
 use Skir\Server\Routing\SkirRouteDefinition;
 use Skir\Server\SkirServer;
 use Skir\Server\Tests\TestCase;
@@ -188,11 +189,7 @@ final class SkirRouteConfigurationTest extends TestCase
 
     private function serverFromRoute(LaravelRoute $route): SkirServer
     {
-        $server = $route->defaults['skirServer'] ?? null;
-
-        $this->assertInstanceOf(SkirServer::class, $server);
-
-        return $server;
+        return app(SkirEndpointRegistry::class)->server($route);
     }
 }
 

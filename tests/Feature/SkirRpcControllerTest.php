@@ -17,6 +17,7 @@ use Skir\Server\Exceptions\SkirServerException;
 use Skir\Server\Facades\Skir;
 use Skir\Server\ProcedureProvider;
 use Skir\Server\RequestContext;
+use Skir\Server\Routing\SkirEndpointRegistry;
 use Skir\Server\SkirContext;
 use Skir\Server\SkirServer;
 use Skir\Server\Tests\TestCase;
@@ -261,9 +262,7 @@ final class SkirRpcControllerTest extends TestCase
         $route = Route::skirRpc('/provider-rpc', [
             SquareProcedureProvider::class,
         ]);
-        $server = $route->defaults['skirServer'] ?? null;
-
-        $this->assertInstanceOf(SkirServer::class, $server);
+        $server = app(SkirEndpointRegistry::class)->server($route);
 
         $prepared = $server->procedure('Square')->prepare(
             5.0,

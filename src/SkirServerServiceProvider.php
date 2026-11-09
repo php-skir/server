@@ -4,19 +4,16 @@ declare(strict_types=1);
 
 namespace Skir\Server;
 
-use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Routing\Route as LaravelRoute;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
-use ReflectionClass;
 use Skir\Server\Commands\GeneratorRunner;
 use Skir\Server\Commands\MakeSkirCommand;
 use Skir\Server\Commands\MakeSkirRequestCommand;
 use Skir\Server\Commands\SymfonyGeneratorRunner;
-use Skir\Server\Exceptions\SkirServerException;
 use Skir\Server\Http\Controllers\SkirRpcController;
 use Skir\Server\Routing\SkirControllerDispatcher;
-use Skir\Server\Routing\SkirRouteDefinition;
+use Skir\Server\Routing\SkirEndpointRegistry;
 use Skir\Server\Scaffolding\ControllerScaffolder;
 use Skir\Server\Scaffolding\ControllerScaffolding;
 use Skir\Server\Scaffolding\Manifest\ManifestRepository;
@@ -40,6 +37,7 @@ final class SkirServerServiceProvider extends ServiceProvider
 
         $this->app->singleton(ProcedureRegistry::class);
         $this->app->singleton(SkirServer::class);
+        $this->app->singleton(SkirEndpointRegistry::class);
         $this->app->singleton(ManifestRepository::class);
         $this->app->bind(GeneratorRunner::class, SymfonyGeneratorRunner::class);
         $this->app->bind(ControllerScaffolding::class, ControllerScaffolder::class);
@@ -67,29 +65,8 @@ final class SkirServerServiceProvider extends ServiceProvider
         /** @var Router $router */
         $router = $this->app['router'];
         $application = $this->app;
-        $resolveProvider = static function (mixed $provider) use ($application): mixed {
-            if (! is_string($provider)) {
-                return $provider;
-            }
 
-            try {
-                return $application->make($provider);
-            } catch (BindingResolutionException $exception) {
-                if ($application->bound($provider)) {
-                    throw $exception;
-                }
-
-                if (class_exists($provider)) {
-                    if ((new ReflectionClass($provider))->isInstantiable()) {
-                        throw $exception;
-                    }
-                }
-
-                throw SkirServerException::invalidRouteProvider($provider);
-            }
-        };
-
-        $router->macro('skirRpc', function (string $uri, array $providers = []) use ($resolveProvider) {
+        $router->macro('skirRpc', function (string $uri, array $providers = []) use ($application) {
             /** @var Router $this */
             $route = $this
                 ->match(['GET', 'POST'], $uri, SkirRpcController::class)
@@ -100,25 +77,9 @@ final class SkirServerServiceProvider extends ServiceProvider
                 return $route;
             }
 
-            $server = new SkirServer(new ProcedureRegistry);
+            $application->make(SkirEndpointRegistry::class)->register($route, $providers);
 
-            foreach ($providers as $provider) {
-                $resolvedProvider = $resolveProvider($provider);
-
-                if ($resolvedProvider instanceof SkirRouteDefinition) {
-                    $resolvedProvider->register($server);
-
-                    continue;
-                }
-
-                if (! $resolvedProvider instanceof ProcedureProvider) {
-                    throw SkirServerException::invalidRouteProvider($resolvedProvider);
-                }
-
-                $resolvedProvider->register($server);
-            }
-
-            return $route->defaults('skirServer', $server);
+            return $route;
         });
     }
 }

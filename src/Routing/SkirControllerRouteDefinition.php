@@ -15,8 +15,14 @@ final readonly class SkirControllerRouteDefinition implements SkirRouteDefinitio
      * @param  class-string  $controller
      */
     public function __construct(
-        private string $controller,
+        public string $controller,
     ) {}
+
+    /** @param array{controller: class-string} $properties */
+    public static function __set_state(array $properties): self
+    {
+        return new self($properties['controller']);
+    }
 
     public function register(SkirServer $server): void
     {
