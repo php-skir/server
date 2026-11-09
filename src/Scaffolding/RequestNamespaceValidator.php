@@ -19,6 +19,7 @@ final class RequestNamespaceValidator
             throw SkirScaffoldingException::invalidRequestNamespace($configuredNamespace);
         }
 
+        $configuredNamespace = trim($configuredNamespace, '\\');
         $namespaceSegments = explode('\\', $configuredNamespace);
 
         if ($configuredNamespace === '' || in_array('', $namespaceSegments, true)) {

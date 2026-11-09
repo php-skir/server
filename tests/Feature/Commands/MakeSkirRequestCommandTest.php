@@ -233,6 +233,16 @@ PHP."\n", file_get_contents($expectedPath));
         self::assertDirectoryDoesNotExist($this->temporaryDirectory.'/app');
     }
 
+    public function test_configured_namespace_may_be_written_with_surrounding_backslashes(): void
+    {
+        config()->set('skir-server.scaffolding.request_namespace', '\\App\\Http\\Requests\\Skir\\');
+
+        $this->artisan('skir:make-request', ['method' => 'Admin.Users.GetUser'])
+            ->assertSuccessful();
+
+        self::assertFileExists($this->temporaryDirectory.'/app/Http/Requests/Skir/Admin/Users/GetUserFormRequest.php');
+    }
+
     public function test_configured_namespace_outside_the_application_namespace_is_rejected(): void
     {
         config()->set('skir-server.scaffolding.request_namespace', 'Domain\\Http\\Requests');
