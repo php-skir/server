@@ -4,20 +4,8 @@ declare(strict_types=1);
 
 namespace Skir\Server\Codecs;
 
-use Skir\Runtime\Cbor;
-use Skir\Server\Exceptions\SkirServerException;
-
 final class SkirCodecs
 {
-    public static function cbor(): SkirCodec
-    {
-        if (! Cbor::available()) {
-            throw SkirServerException::missingCborDependency();
-        }
-
-        return new CborCodec;
-    }
-
     public static function denseJson(): SkirCodec
     {
         return new DenseJsonCodec;

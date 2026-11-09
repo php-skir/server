@@ -12,7 +12,6 @@ use Illuminate\Routing\Router;
 use JsonException;
 use Skir\Runtime\Exceptions\SkirRuntimeException;
 use Skir\Server\Codecs\SkirCodec;
-use Skir\Server\Codecs\SkirHttpCodec;
 use Skir\Server\Exceptions\SkirServerException;
 use Skir\Server\Http\Requests\SkirMethodRequestScope;
 use Skir\Server\PreparedProcedure;
@@ -49,7 +48,7 @@ final readonly class SkirRpcController
             }
 
             $codec = $server->codec();
-            $payload = $this->payloadFromRequest($request, $codec);
+            $payload = $this->payloadFromRequest($request);
             $method = $this->methodFromPayload($payload);
             $procedure = $server->procedure($method);
             $requestPayload = array_key_exists('request', $payload) ? $payload['request'] : 0;
@@ -100,11 +99,6 @@ final readonly class SkirRpcController
     ): Response {
         $encodedResponse = $codec->encodeResponse($procedure->descriptor, $result);
 
-        if ($codec instanceof SkirHttpCodec) {
-            return response($encodedResponse, Response::HTTP_OK)
-                ->header('content-type', $codec->contentType());
-        }
-
         return response()->json($encodedResponse, Response::HTTP_OK);
     }
 
@@ -153,14 +147,10 @@ final readonly class SkirRpcController
      *     request?: mixed
      * }
      */
-    private function payloadFromRequest(Request $request, SkirCodec $codec): array
+    private function payloadFromRequest(Request $request): array
     {
         if ($this->usesQueryString($request)) {
             return $this->payloadFromQueryString($request);
-        }
-
-        if ($codec instanceof SkirHttpCodec) {
-            return $codec->decodePayload($request->getContent());
         }
 
         try {

@@ -76,12 +76,6 @@ final class SkirServerExceptionTest extends TestCase
                 'Configured Skir codec ['.InvalidConfiguredCodec::class.'] must implement '
                 .'[Skir\\Server\\Codecs\\SkirCodec].',
             ],
-            'missing CBOR dependency' => [
-                SkirServerException::missingCborDependency(),
-                'skir_missing_cbor_dependency',
-                500,
-                'Skir CBOR support requires the [spomky-labs/cbor-php] Composer package.',
-            ],
         ];
     }
 }

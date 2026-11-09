@@ -20,7 +20,7 @@ return [
 ];
 ```
 
-The codec class is resolved through Laravel's container and must implement `Skir\Server\Codecs\SkirCodec`. The built-in codec classes are `DenseJsonCodec`, `StandardJsonCodec`, `Base64DenseJsonCodec`, and `CborCodec`, all in the `Skir\Server\Codecs` namespace. An explicit codec passed as the third argument to `Route::skirRpc()` overrides the configured default for that route.
+The codec class is resolved through Laravel's container and must implement `Skir\Server\Codecs\SkirCodec`. The built-in codec classes are `DenseJsonCodec`, `StandardJsonCodec`, and `Base64DenseJsonCodec`, all in the `Skir\Server\Codecs` namespace. An explicit codec passed as the third argument to `Route::skirRpc()` overrides the configured default for that route.
 
 ## Dense JSON
 
@@ -71,23 +71,3 @@ Route::skirRpc('/api/skir-base64', [
 ```
 
 The outer SkirRPC envelope remains JSON; only the request and response values are represented as base64-encoded dense JSON.
-
-## CBOR
-
-CBOR accepts an `application/cbor` request body containing the SkirRPC `method` and dense `request` values, then returns an `application/cbor` response body:
-
-```php
-use Skir\Server\Codecs\SkirCodecs;
-
-Route::skirRpc('/api/skir-cbor', [
-    Skir::controller(UserController::class),
-], SkirCodecs::cbor());
-```
-
-CBOR support is optional. Install its runtime dependency in the consuming Laravel application before selecting this codec:
-
-```bash
-composer require spomky-labs/cbor-php
-```
-
-Calling `SkirCodecs::cbor()` without the dependency throws a `SkirServerException` while the route is being built.

@@ -9,8 +9,7 @@ injection. Before exposing a scaffolded procedure, implement its placeholder and
 `authorize()` and `rules()`; scaffolded Form Requests deny access and validate nothing by default.
 
 Method middleware does not protect Studio. Put middleware on the outer Skir route when Studio or the
-complete endpoint must be private. Keep the server codec aligned with clients, and treat CBOR as
-serialization rather than security.
+complete endpoint must be private. Keep the server codec aligned with clients.
 
 Use the `skir-server-development` skill for procedure routing, scaffolding, Studio, codec, or testing
 work.

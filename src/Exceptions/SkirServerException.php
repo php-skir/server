@@ -65,15 +65,6 @@ final class SkirServerException extends RuntimeException
         );
     }
 
-    public static function missingCborDependency(): self
-    {
-        return new self(
-            'Skir CBOR support requires the [spomky-labs/cbor-php] Composer package.',
-            'skir_missing_cbor_dependency',
-            500,
-        );
-    }
-
     /** @param array<string, array<int, string>> $errors */
     public static function validationFailed(array $errors): self
     {
