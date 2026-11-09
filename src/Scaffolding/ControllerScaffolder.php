@@ -399,8 +399,7 @@ final class ControllerScaffolder implements ControllerScaffolding
             );
         }
 
-        $stubName = $invokable ? 'skir-invokable-controller.stub' : 'skir-controller.stub';
-        $source = $this->renderStub($stubName, [
+        $source = $this->renderStub('skir-controller.stub', [
             '{{ namespace }}' => $namespace,
             '{{ imports }}' => $imports->source(),
             '{{ className }}' => $className,
