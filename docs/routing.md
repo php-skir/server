@@ -167,7 +167,7 @@ Route::skirRpc('/api/skir', [
 ]);
 ```
 
-Each Skir method can be registered only once on an endpoint. Duplicate registrations throw a `SkirServerException` while the route is registered, or on the endpoint's first call when routes are cached.
+Each Skir method can be registered only once on an endpoint. Duplicate registrations throw a `SkirServerException` while the route is registered. When routes are cached, the endpoint is built on its first call instead, and that call answers with a `skir_duplicate_method` error.
 
 ## Invokable controllers
 
