@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Skir\Server\Scaffolding;
 
+use LogicException;
 use PhpParser\Node;
 use PhpParser\Node\Expr\ClassConstFetch;
 use PhpParser\Node\Name;
@@ -14,6 +15,7 @@ use PhpParser\NodeVisitor\CloningVisitor;
 use PhpParser\NodeVisitor\NameResolver;
 use PhpParser\ParserFactory;
 use PhpParser\PrettyPrinter\Standard;
+use RuntimeException;
 use Skir\Server\Attributes\SkirMethod;
 use Skir\Server\Exceptions\SkirScaffoldingException;
 use Skir\Server\Scaffolding\Manifest\SkirMethodDefinition;
@@ -58,7 +60,7 @@ final class PhpControllerEditor
         if ($originalStatements === null) {
             throw SkirScaffoldingException::invalidExistingController(
                 $path,
-                new \RuntimeException('The parser returned no statements.'),
+                new RuntimeException('The parser returned no statements.'),
             );
         }
 
@@ -325,7 +327,7 @@ final class PhpControllerEditor
         $method = $class instanceof Stmt\Class_ ? $class->getMethods()[0] ?? null : null;
 
         if (! $method instanceof Stmt\ClassMethod) {
-            throw new \LogicException('Rendered Skir controller method could not be parsed.');
+            throw new LogicException('Rendered Skir controller method could not be parsed.');
         }
 
         return $method;

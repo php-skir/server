@@ -347,13 +347,11 @@ final class MakeSkirCommand extends Command
         $option = $this->option('style');
         $controller = $this->option('controller');
 
-        if (is_string($option) && $option !== '') {
-            $style = $option;
-        } elseif (is_string($controller)) {
-            $style = ControllerStyle::Single->value;
-        } else {
-            $style = config('skir-server.scaffolding.controller_style');
-        }
+        $style = match (true) {
+            is_string($option) && $option !== '' => $option,
+            is_string($controller) => ControllerStyle::Single->value,
+            default => config('skir-server.scaffolding.controller_style'),
+        };
 
         if (! is_string($style)) {
             throw new InvalidArgumentException('Skir scaffolding configuration [controller_style] must be a supported string.');
