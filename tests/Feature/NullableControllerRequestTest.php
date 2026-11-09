@@ -226,6 +226,37 @@ final class NullableControllerRequestTest extends TestCase
     }
 
     #[Test]
+    public function null_for_a_nonnullable_generated_request_parameter_is_rejected(): void
+    {
+        $this->registerRoute(NullableRequestMethod::Standard, NonnullableStandardController::class);
+
+        $this->postNullRequest('/nullable-standard', 'Standard')
+            ->assertUnprocessable()
+            ->assertExactJson([
+                'error' => [
+                    'code' => 'skir_invalid_request',
+                    'message' => 'The request payload does not match the expected request type.',
+                ],
+            ]);
+    }
+
+    #[Test]
+    public function null_for_a_nonnullable_form_request_parameter_is_rejected(): void
+    {
+        $this->registerRoute(NullableRequestMethod::FormRequest, NonnullableFormRequestController::class);
+
+        $this->withSession([])
+            ->postNullRequest('/nullable-form-request/acme', 'FormRequest')
+            ->assertUnprocessable()
+            ->assertExactJson([
+                'error' => [
+                    'code' => 'skir_invalid_request',
+                    'message' => 'Skir Form Requests require a decoded array/object payload.',
+                ],
+            ]);
+    }
+
+    #[Test]
     public function context_only_methods_are_not_given_a_null_payload_argument(): void
     {
         $this->registerRoute(NullableRequestMethod::ContextOnly, ContextOnlyController::class);
