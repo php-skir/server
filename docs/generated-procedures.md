@@ -87,7 +87,7 @@ Controller methods can receive the generated DTO directly or receive a Laravel F
 2. `fromArray()` for standard PHP objects;
 3. `fromSkirValue()` for another compatible application type.
 
-Simple Data Objects and Laravel Data therefore run their generated validation when a decoded object payload is injected directly. Standard PHP objects are hydrated through `fromArray()` and do not add semantic Laravel validation. Use a Form Request when a standard PHP payload needs application validation.
+Simple Data Objects and Laravel Data therefore run their generated validation when a decoded object payload is injected directly; a failure returns HTTP 422 `skir_validation_failed` with field errors in `error.details`, the same as a Form Request. Standard PHP objects are hydrated through `fromArray()` and do not add semantic Laravel validation. Use a Form Request when a standard PHP payload needs application validation.
 
 For typed validation, extend `SkirFormRequest` and identify the generated request class:
 
