@@ -23,7 +23,7 @@ SkirRPC offers many of the same benefits as gRPC—shared method definitions, ge
 - Route procedures to attributed or invokable Laravel controllers with native dependency injection, middleware, authorization, and Form Requests. See [Routing](docs/routing.md).
 - Keep generated providers and manual handlers available for non-controller layouts. See [Routing](docs/routing.md#generated-procedure-providers).
 - Inspect an endpoint's procedures through its opt-in Studio. See [Studio](docs/routing.md#studio).
-- Configure dense JSON, standard JSON, or base64 dense JSON package-wide or per endpoint. See [Codecs](docs/codecs.md).
+- Speak the standard SkirRPC protocol, so clients generated for any Skir language can call your endpoints. See [Wire protocol](docs/protocol.md).
 
 ## Quick start
 
@@ -34,13 +34,13 @@ composer require php-skir/server std-out/simple-data-objects
 npm install --save-dev skir skir-simple-data-objects-generator
 ```
 
-The package defaults match the paths used below. To customize manifest locations, generator execution, controller layout, Form Request generation, Studio, or codecs, publish `config/skir-server.php`:
+The package defaults match the paths used below. To customize manifest locations, generator execution, controller layout, Form Request generation, or Studio, publish `config/skir-server.php`:
 
 ```bash
 php artisan vendor:publish --tag=skir-server-config
 ```
 
-See [Scaffolding configuration](docs/scaffolding.md#configure-manifests-and-destinations) for the current keys and defaults. Calling `studio()` or `studio(false)` on a route overrides the Studio default, while an explicit codec passed to `Route::skirRpc()` overrides the configured codec.
+See [Scaffolding configuration](docs/scaffolding.md#configure-manifests-and-destinations) for the current keys and defaults. Calling `studio()` or `studio(false)` on a route overrides the Studio default.
 
 Define a Skir method:
 

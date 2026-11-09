@@ -21,7 +21,6 @@ use PHPUnit\Framework\Attributes\Test;
 use Skir\Runtime\Field;
 use Skir\Runtime\MethodDescriptor;
 use Skir\Runtime\Type;
-use Skir\Server\Codecs\SkirCodecs;
 use Skir\Server\Contracts\SkirMethodReference;
 use Skir\Server\Exceptions\AmbiguousControllerRequestException;
 use Skir\Server\Facades\Skir;
@@ -157,7 +156,7 @@ final class SkirFormRequestTest extends TestCase
             ],
         )->assertOk()->json();
 
-        $this->assertSame('Laravel Data', $result);
+        $this->assertSame(['name' => 'Laravel Data'], $result);
         $this->assertSame(1, LaravelDataFixture::$factoryCalls);
         $this->assertSame('makeFromSkirPayload', LaravelDataFixture::$factory);
         $this->assertSame([
@@ -185,7 +184,7 @@ final class SkirFormRequestTest extends TestCase
             ],
         )->assertOk()->json();
 
-        $this->assertSame('Standard PHP', $result);
+        $this->assertSame(['name' => 'Standard PHP'], $result);
         $this->assertSame(1, StandardPhpFixture::$factoryCalls);
         $this->assertSame('fromArray', StandardPhpFixture::$factory);
         $this->assertSame([
@@ -423,7 +422,7 @@ final class SkirFormRequestTest extends TestCase
     {
         Route::skirRpc('/direct-payload-rpc', [
             Skir::method(FormRequestSkirMethod::DirectUser, DirectPayloadController::class),
-        ], SkirCodecs::standardJson());
+        ]);
 
         $this
             ->postJson('/direct-payload-rpc', [
@@ -447,7 +446,7 @@ final class SkirFormRequestTest extends TestCase
         $this->be(new GenericUser(['id' => 42]));
         Route::skirRpc('/ambiguous-direct-payload-rpc', [
             Skir::method(FormRequestSkirMethod::AmbiguousDirectUser, AmbiguousDirectPayloadController::class),
-        ], SkirCodecs::standardJson());
+        ]);
 
         $this->withoutExceptionHandling();
 
@@ -483,16 +482,12 @@ final class SkirFormRequestTest extends TestCase
         RenameUserFormController::$requestPayload = [];
         Route::skirRpc('/get-form-request', [
             Skir::method(FormRequestSkirMethod::RenameUser, RenameUserFormController::class),
-        ], SkirCodecs::standardJson());
-        $query = http_build_query([
-            'method' => 'RenameUser',
-            'request' => json_encode([
-                'id' => 42,
-                'name' => '  Maxim  ',
-                'metadata' => 'decoded',
-            ], JSON_THROW_ON_ERROR),
-            'transportOnly' => 'must-not-leak',
         ]);
+        $query = rawurlencode('RenameUser:3001:readable:'.json_encode([
+            'id' => 42,
+            'name' => '  Maxim  ',
+            'metadata' => 'decoded',
+        ], JSON_THROW_ON_ERROR));
 
         $this
             ->withHeader('Accept', 'application/json')
@@ -517,7 +512,7 @@ final class SkirFormRequestTest extends TestCase
     {
         $route = Route::skirRpc('/native-form-request/{tenant}', [
             Skir::method(FormRequestSkirMethod::RenameUser, $controller),
-        ], SkirCodecs::standardJson());
+        ]);
         $route->middleware('web');
         $this->withoutMiddleware(TrimStrings::class);
         $this->be(new GenericUser(['id' => 42]));
@@ -784,23 +779,25 @@ final class StandardPhpContractSkirRequest extends SkirFormRequest
 
 final class LaravelDataContractController
 {
-    public function __invoke(LaravelDataContractSkirRequest $request): string
+    /** @return array{name: string} */
+    public function __invoke(LaravelDataContractSkirRequest $request): array
     {
         /** @var LaravelDataFixture $payload */
         $payload = $request->skir();
 
-        return $payload->name;
+        return ['name' => $payload->name];
     }
 }
 
 final class StandardPhpContractController
 {
-    public function __invoke(StandardPhpContractSkirRequest $request): string
+    /** @return array{name: string} */
+    public function __invoke(StandardPhpContractSkirRequest $request): array
     {
         /** @var StandardPhpFixture $payload */
         $payload = $request->skir();
 
-        return $payload->name;
+        return ['name' => $payload->name];
     }
 }
 

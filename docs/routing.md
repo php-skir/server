@@ -286,17 +286,7 @@ app(SkirServer::class)->addMethod(
 );
 ```
 
-The endpoint accepts SkirRPC envelopes. With the default dense JSON codec:
-
-```json
-{"method":"Square","request":5.0}
-```
-
-The response is the raw encoded Skir value:
-
-```json
-25
-```
+The endpoint accepts standard SkirRPC requests, for example the body `Square:1001::5`, and answers with the encoded response value, `25`. See [Wire protocol](protocol.md) for every request form.
 
 GET requests are also supported. Pass the method and a JSON-encoded request value as query parameters:
 

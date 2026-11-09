@@ -25,9 +25,9 @@ use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 use Skir\Runtime\Field;
 use Skir\Runtime\MethodDescriptor;
+use Skir\Runtime\ReadableJson;
 use Skir\Runtime\Type;
 use Skir\Server\Attributes\SkirMethod;
-use Skir\Server\Codecs\SkirCodecs;
 use Skir\Server\Contracts\SkirMethodReference;
 use Skir\Server\Exceptions\SkirServerException;
 use Skir\Server\Exceptions\UnsupportedControllerParameterException;
@@ -81,7 +81,7 @@ final class LaravelControllerDispatchTest extends TestCase
         $this->assertSame(spl_object_id($context), NativeDispatchController::$contextObjectId);
         $this->assertSame(
             ['name' => 'Maxim:container:Native Skir'],
-            $server->codec()->encodeResponse(NativeDispatchMethod::Update->descriptor(), $result),
+            ReadableJson::encode(NativeDispatchMethod::Update->descriptor()->responseType, $result),
         );
     }
 
@@ -164,7 +164,7 @@ final class LaravelControllerDispatchTest extends TestCase
     {
         Route::skirRpc('/invokable-controller', [
             Skir::method(NativeDispatchMethod::Invokable, InvokableDispatchController::class),
-        ], SkirCodecs::standardJson());
+        ]);
 
         $this
             ->postJson('/invokable-controller', [
@@ -415,28 +415,28 @@ final class LaravelControllerDispatchTest extends TestCase
     }
 
     #[Test]
-    public function codec_runtime_exceptions_keep_their_skir_envelope_inside_the_middleware_pipeline(): void
+    public function unserializable_responses_keep_their_skir_envelope_inside_the_middleware_pipeline(): void
     {
         $this->be(new GenericUser(['id' => 42]));
-        Route::skirRpc('/pipeline-codec-error', [
+        Route::skirRpc('/pipeline-unserializable-response', [
             Skir::controller(RoutingPipelineController::class),
         ]);
 
         $this
-            ->postJson('/pipeline-codec-error', [
-                'method' => 'RuntimeCodecFailure',
+            ->postJson('/pipeline-unserializable-response', [
+                'method' => 'UnserializableResponse',
                 'request' => null,
             ])
-            ->assertUnprocessable()
+            ->assertServerError()
             ->assertHeader('X-Skir-Middleware', 'applied')
             ->assertExactJson([
                 'error' => [
-                    'code' => 'skir_invalid_request',
-                    'message' => 'Skir array values must be PHP arrays.',
+                    'code' => 'skir_invalid_response',
+                    'message' => 'Skir method [UnserializableResponse] returned a value that cannot be serialized: Skir array values must be PHP arrays.',
                 ],
             ]);
 
-        $this->assertTransportRequestStateRestored('/pipeline-codec-error');
+        $this->assertTransportRequestStateRestored('/pipeline-unserializable-response');
     }
 
     #[Test]
@@ -684,7 +684,7 @@ final class LaravelControllerDispatchTest extends TestCase
     {
         return Route::skirRpc($uri, [
             Skir::controller($controller),
-        ], SkirCodecs::standardJson());
+        ]);
     }
 
     private function serverFromRoute(LaravelRoute $route): SkirServer
@@ -737,7 +737,7 @@ enum NativeDispatchMethod implements SkirMethodReference
     case AuthorizationFailure;
     case PackageFailure;
     case UnexpectedFailure;
-    case RuntimeCodecFailure;
+    case UnserializableResponse;
     case FilteredMiddleware;
     case LegacyMiddleware;
     case Invokable;
@@ -852,8 +852,8 @@ enum NativeDispatchMethod implements SkirMethodReference
                 Type::optional(Type::struct([])),
                 Type::string(),
             ),
-            self::RuntimeCodecFailure => new MethodDescriptor(
-                'RuntimeCodecFailure',
+            self::UnserializableResponse => new MethodDescriptor(
+                'UnserializableResponse',
                 6017,
                 Type::optional(Type::struct([])),
                 Type::array(Type::string()),
@@ -1242,10 +1242,10 @@ final class RoutingPipelineController
         throw new RuntimeException('Unexpected procedure failure.');
     }
 
-    #[SkirMethod(NativeDispatchMethod::RuntimeCodecFailure)]
+    #[SkirMethod(NativeDispatchMethod::UnserializableResponse)]
     #[ControllerMiddlewareAttribute(ScopedUserResolverMiddleware::class)]
     #[ControllerMiddlewareAttribute(ResponsePostProcessingMiddleware::class)]
-    public function runtimeCodecFailure(): string
+    public function unserializableResponse(): string
     {
         return 'not-an-array';
     }

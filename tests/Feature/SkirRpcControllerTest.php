@@ -8,12 +8,10 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Route as LaravelRoute;
 use Illuminate\Support\Facades\Route;
 use PHPUnit\Framework\Attributes\Test;
-use Skir\Runtime\DenseJson;
 use Skir\Runtime\Field;
 use Skir\Runtime\MethodDescriptor;
 use Skir\Runtime\Type;
 use Skir\Server\Attributes\SkirMethod;
-use Skir\Server\Codecs\SkirCodecs;
 use Skir\Server\Contracts\SkirMethodReference;
 use Skir\Server\Exceptions\SkirServerException;
 use Skir\Server\Facades\Skir;
@@ -25,6 +23,111 @@ use Skir\Server\Tests\TestCase;
 
 final class SkirRpcControllerTest extends TestCase
 {
+    #[Test]
+    public function it_answers_colon_separated_requests_in_dense_json(): void
+    {
+        Route::skirRpc('/colon-rpc', [RenameUserProcedureProvider::class]);
+
+        $this
+            ->call('POST', '/colon-rpc', content: 'RenameUser:1003::[42,"Ruben"]')
+            ->assertOk()
+            ->assertHeader('content-type', 'application/json')
+            ->assertContent('[42,"Ruben updated"]');
+    }
+
+    #[Test]
+    public function it_answers_colon_separated_requests_in_readable_json_when_asked(): void
+    {
+        Route::skirRpc('/colon-readable-rpc', [RenameUserProcedureProvider::class]);
+
+        $this
+            ->call('POST', '/colon-readable-rpc', content: 'RenameUser:1003:readable:[42,"Ruben"]')
+            ->assertOk()
+            ->assertExactJson([
+                'id' => 42,
+                'name' => 'Ruben updated',
+            ]);
+    }
+
+    #[Test]
+    public function it_looks_up_methods_by_name_when_the_number_is_empty(): void
+    {
+        Route::skirRpc('/by-name-rpc', [SquareProcedureProvider::class]);
+
+        $this
+            ->call('POST', '/by-name-rpc', content: 'Square:::5')
+            ->assertOk()
+            ->assertContent('25');
+    }
+
+    #[Test]
+    public function the_method_number_wins_over_the_name(): void
+    {
+        Route::skirRpc('/by-number-rpc', [SquareProcedureProvider::class]);
+
+        $this
+            ->call('POST', '/by-number-rpc', content: 'Anything:1001::5')
+            ->assertOk()
+            ->assertContent('25');
+    }
+
+    #[Test]
+    public function it_accepts_a_method_number_in_json_object_requests(): void
+    {
+        Route::skirRpc('/json-number-rpc', [SquareProcedureProvider::class]);
+
+        $this
+            ->postJson('/json-number-rpc', [
+                'method' => 1001,
+                'request' => 5,
+            ])
+            ->assertOk()
+            ->assertContent('25');
+    }
+
+    #[Test]
+    public function it_reads_get_requests_from_the_query_string(): void
+    {
+        Route::skirRpc('/get-rpc', [RenameUserProcedureProvider::class]);
+
+        $this
+            ->get('/get-rpc?'.rawurlencode('RenameUser:1003::[42,"Ruben"]'))
+            ->assertOk()
+            ->assertContent('[42,"Ruben updated"]');
+    }
+
+    #[Test]
+    public function it_rejects_ambiguous_method_names(): void
+    {
+        $server = app(SkirServer::class);
+        $server->addMethod(new MethodDescriptor('Same', 2001, Type::int32(), Type::int32()), fn (int $value): int => $value);
+        $server->addMethod(new MethodDescriptor('Same', 2002, Type::int32(), Type::int32()), fn (int $value): int => $value);
+
+        $this
+            ->call('POST', '/skir', content: 'Same:::1')
+            ->assertUnprocessable()
+            ->assertJsonPath('error.code', 'skir_invalid_request');
+
+        $this
+            ->call('POST', '/skir', content: 'Same:2002::1')
+            ->assertOk()
+            ->assertContent('1');
+    }
+
+    #[Test]
+    public function it_reports_responses_that_do_not_match_the_response_type(): void
+    {
+        app(SkirServer::class)->addMethod(
+            new MethodDescriptor('Broken', 2003, Type::int32(), Type::string()),
+            fn (int $value): array => [$value],
+        );
+
+        $this
+            ->call('POST', '/skir', content: 'Broken:2003::1')
+            ->assertServerError()
+            ->assertJsonPath('error.code', 'skir_invalid_response');
+    }
+
     #[Test]
     public function it_dispatches_a_posted_skir_rpc_request(): void
     {
@@ -65,7 +168,7 @@ final class SkirRpcControllerTest extends TestCase
                 'request' => [42, 'Ruben'],
             ])
             ->assertOk()
-            ->assertExactJson([42, 'Ruben from 127.0.0.1']);
+            ->assertExactJson(['id' => 42, 'name' => 'Ruben from 127.0.0.1']);
     }
 
     #[Test]
@@ -77,7 +180,7 @@ final class SkirRpcControllerTest extends TestCase
         );
 
         $this
-            ->getJson('/skir?method=Square&request=5.0')
+            ->getJson('/skir?Square:1001::5.0')
             ->assertOk()
             ->assertContent('25');
     }
@@ -93,7 +196,7 @@ final class SkirRpcControllerTest extends TestCase
         $this
             ->call(
                 'HEAD',
-                '/skir?method=Square&request=5.0',
+                '/skir?Square:1001::5.0',
                 server: ['HTTP_ACCEPT' => 'application/json'],
             )
             ->assertOk()
@@ -216,7 +319,7 @@ final class SkirRpcControllerTest extends TestCase
                 'request' => [42, 'Maxim'],
             ])
             ->assertOk()
-            ->assertExactJson([42, 'Maxim updated']);
+            ->assertExactJson(['id' => 42, 'name' => 'Maxim updated']);
 
         $this
             ->postJson('/attribute-rpc', [
@@ -255,7 +358,7 @@ final class SkirRpcControllerTest extends TestCase
     public function it_rejects_duplicate_methods_on_one_endpoint(): void
     {
         $this->expectException(SkirServerException::class);
-        $this->expectExceptionMessage('Skir method [Square] is already registered on this endpoint.');
+        $this->expectExceptionMessage('Skir method [Square] with number [1001] is already registered on this endpoint.');
 
         Route::skirRpc('/duplicate-rpc', [
             Skir::method(TestSkirMethod::Square, SquareController::class),
@@ -312,14 +415,14 @@ final class SkirRpcControllerTest extends TestCase
     }
 
     #[Test]
-    public function it_can_use_standard_json_payloads_for_an_endpoint(): void
+    public function it_answers_json_object_requests_in_readable_json(): void
     {
-        Route::skirRpc('/standard-rpc', [
+        Route::skirRpc('/readable-rpc', [
             RenameUserProcedureProvider::class,
-        ], SkirCodecs::standardJson());
+        ]);
 
         $this
-            ->postJson('/standard-rpc', [
+            ->postJson('/readable-rpc', [
                 'method' => 'RenameUser',
                 'request' => [
                     'id' => 42,
@@ -331,22 +434,6 @@ final class SkirRpcControllerTest extends TestCase
                 'id' => 42,
                 'name' => 'Ruben updated',
             ]);
-    }
-
-    #[Test]
-    public function it_can_use_base64_encoded_dense_json_payloads_for_an_endpoint(): void
-    {
-        Route::skirRpc('/base64-rpc', [
-            SquareProcedureProvider::class,
-        ], SkirCodecs::base64DenseJson());
-
-        $this
-            ->postJson('/base64-rpc', [
-                'method' => 'Square',
-                'request' => base64_encode(DenseJson::toJson(Type::float32(), 5.0)),
-            ])
-            ->assertOk()
-            ->assertContent(json_encode(base64_encode(DenseJson::toJson(Type::float32(), 25.0)), JSON_THROW_ON_ERROR));
     }
 
     #[Test]
@@ -405,7 +492,7 @@ final class SkirRpcControllerTest extends TestCase
             ->assertExactJson([
                 'error' => [
                     'code' => 'skir_invalid_request',
-                    'message' => 'Skir requests must include a string [method] value.',
+                    'message' => 'Skir requests must include a [method] field.',
                 ],
             ]);
     }

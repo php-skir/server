@@ -9,8 +9,6 @@ use Illuminate\Routing\Route as LaravelRoute;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 use ReflectionClass;
-use Skir\Server\Codecs\DenseJsonCodec;
-use Skir\Server\Codecs\SkirCodec;
 use Skir\Server\Commands\GeneratorRunner;
 use Skir\Server\Commands\MakeSkirCommand;
 use Skir\Server\Commands\MakeSkirRequestCommand;
@@ -41,29 +39,6 @@ final class SkirServerServiceProvider extends ServiceProvider
         ));
 
         $this->app->singleton(ProcedureRegistry::class);
-        $this->app->singleton(SkirCodec::class, function (): SkirCodec {
-            $codec = config('skir-server.codec', DenseJsonCodec::class);
-
-            if (! is_string($codec)) {
-                throw SkirServerException::invalidConfiguredCodec($codec);
-            }
-
-            if (! is_a($codec, SkirCodec::class, true)) {
-                throw SkirServerException::invalidConfiguredCodec($codec);
-            }
-
-            if ($codec === SkirCodec::class) {
-                throw SkirServerException::invalidConfiguredCodec($codec);
-            }
-
-            if (! $this->app->bound($codec)) {
-                if (! (new ReflectionClass($codec))->isInstantiable()) {
-                    throw SkirServerException::invalidConfiguredCodec($codec);
-                }
-            }
-
-            return $this->app->make($codec);
-        });
         $this->app->singleton(SkirServer::class);
         $this->app->singleton(ManifestRepository::class);
         $this->app->bind(GeneratorRunner::class, SymfonyGeneratorRunner::class);
@@ -114,7 +89,7 @@ final class SkirServerServiceProvider extends ServiceProvider
             }
         };
 
-        $router->macro('skirRpc', function (string $uri, array $providers = [], ?SkirCodec $codec = null) use ($resolveProvider) {
+        $router->macro('skirRpc', function (string $uri, array $providers = []) use ($resolveProvider) {
             /** @var Router $this */
             $route = $this
                 ->match(['GET', 'POST'], $uri, SkirRpcController::class)
@@ -122,12 +97,10 @@ final class SkirServerServiceProvider extends ServiceProvider
                 ->defaults('skirStudioQueryKey', (string) config('skir-server.studio_query_key', 'studio'));
 
             if ($providers === []) {
-                if ($codec === null) {
-                    return $route;
-                }
+                return $route;
             }
 
-            $server = new SkirServer(new ProcedureRegistry, $codec ?? app(SkirCodec::class));
+            $server = new SkirServer(new ProcedureRegistry);
 
             foreach ($providers as $provider) {
                 $resolvedProvider = $resolveProvider($provider);

@@ -28,16 +28,38 @@ jobs:
         with:
           path: server
 
+      - name: Resolve runtime branch
+        id: runtime-ref
+        run: |
+          branch="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          if git ls-remote --exit-code --heads https://github.com/php-skir/runtime.git "$branch" > /dev/null; then
+            echo "ref=$branch" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout runtime
         uses: actions/checkout@v7
         with:
           repository: php-skir/runtime
+          ref: ${{ steps.runtime-ref.outputs.ref }}
           path: runtime
+
+      - name: Resolve client branch
+        id: client-ref
+        run: |
+          branch="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          if git ls-remote --exit-code --heads https://github.com/php-skir/client.git "$branch" > /dev/null; then
+            echo "ref=$branch" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Checkout client
         uses: actions/checkout@v7
         with:
           repository: php-skir/client
+          ref: ${{ steps.client-ref.outputs.ref }}
           path: client
 
       - name: Setup PHP
@@ -79,16 +101,38 @@ jobs:
         with:
           path: server
 
+      - name: Resolve runtime branch
+        id: runtime-ref
+        run: |
+          branch="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          if git ls-remote --exit-code --heads https://github.com/php-skir/runtime.git "$branch" > /dev/null; then
+            echo "ref=$branch" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout runtime
         uses: actions/checkout@v7
         with:
           repository: php-skir/runtime
+          ref: ${{ steps.runtime-ref.outputs.ref }}
           path: runtime
+
+      - name: Resolve client branch
+        id: client-ref
+        run: |
+          branch="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          if git ls-remote --exit-code --heads https://github.com/php-skir/client.git "$branch" > /dev/null; then
+            echo "ref=$branch" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Checkout client
         uses: actions/checkout@v7
         with:
           repository: php-skir/client
+          ref: ${{ steps.client-ref.outputs.ref }}
           path: client
 
       - name: Setup PHP
@@ -110,7 +154,7 @@ jobs:
             resources/boost/skills/skir-server-development/references/procedures-and-routing.md \
             resources/boost/skills/skir-server-development/references/scaffolding.md \
             resources/boost/skills/skir-server-development/references/structures-and-validation.md \
-            resources/boost/skills/skir-server-development/references/studio-codecs-and-testing.md
+            resources/boost/skills/skir-server-development/references/studio-protocol-and-testing.md
           do
             grep -Fxq "$asset" build/archive-files.txt
           done
@@ -123,8 +167,8 @@ jobs:
         run: |
           composer config minimum-stability dev
           composer config prefer-stable true
-          composer config repositories.runtime '{"type":"path","url":"../runtime","options":{"symlink":false}}' --json
-          composer config repositories.client '{"type":"path","url":"../client","options":{"symlink":false}}' --json
+          composer config repositories.runtime '{"type":"path","url":"../runtime","options":{"symlink":false,"versions":{"php-skir/runtime":"0.2.x-dev"}}}' --json
+          composer config repositories.client '{"type":"path","url":"../client","options":{"symlink":false,"versions":{"php-skir/client":"0.2.x-dev"}}}' --json
           composer config repositories.server '{"type":"path","url":"../server","options":{"symlink":false}}' --json
           if [ "${{ matrix.scenario }}" = 'both' ]
           then
@@ -154,7 +198,7 @@ jobs:
           test -f .agents/skills/skir-server-development/references/procedures-and-routing.md
           test -f .agents/skills/skir-server-development/references/scaffolding.md
           test -f .agents/skills/skir-server-development/references/structures-and-validation.md
-          test -f .agents/skills/skir-server-development/references/studio-codecs-and-testing.md
+          test -f .agents/skills/skir-server-development/references/studio-protocol-and-testing.md
           if [ "${{ matrix.scenario }}" = 'both' ]
           then
             grep -Fq 'php-skir/client' AGENTS.md
@@ -183,16 +227,38 @@ jobs:
         with:
           path: server
 
+      - name: Resolve runtime branch
+        id: runtime-ref
+        run: |
+          branch="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          if git ls-remote --exit-code --heads https://github.com/php-skir/runtime.git "$branch" > /dev/null; then
+            echo "ref=$branch" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout runtime
         uses: actions/checkout@v7
         with:
           repository: php-skir/runtime
+          ref: ${{ steps.runtime-ref.outputs.ref }}
           path: runtime
+
+      - name: Resolve client branch
+        id: client-ref
+        run: |
+          branch="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          if git ls-remote --exit-code --heads https://github.com/php-skir/client.git "$branch" > /dev/null; then
+            echo "ref=$branch" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Checkout client
         uses: actions/checkout@v7
         with:
           repository: php-skir/client
+          ref: ${{ steps.client-ref.outputs.ref }}
           path: client
 
       - name: Setup PHP

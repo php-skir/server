@@ -15,7 +15,6 @@ use LogicException;
 use PHPUnit\Framework\Attributes\Test;
 use Skir\Runtime\MethodDescriptor;
 use Skir\Runtime\Type;
-use Skir\Server\Codecs\SkirCodec;
 use Skir\Server\Exceptions\SkirServerException;
 use Skir\Server\ProcedureProvider;
 use Skir\Server\Routing\SkirRouteDefinition;
@@ -110,7 +109,7 @@ final class SkirRouteConfigurationTest extends TestCase
         ]);
 
         $this->assertSame(
-            ['ContainerBoundMethod'],
+            [5007],
             array_keys($this->serverFromRoute($route)->procedures()),
         );
     }
@@ -125,7 +124,7 @@ final class SkirRouteConfigurationTest extends TestCase
         ]);
 
         $this->assertSame(
-            ['LazyBoundMethod'],
+            [5008],
             array_keys($this->serverFromRoute($route)->procedures()),
         );
     }
@@ -150,7 +149,7 @@ final class SkirRouteConfigurationTest extends TestCase
         ]);
 
         $this->assertSame(
-            ['RouteDefinitionMethod', 'ProcedureProviderMethod'],
+            [5005, 5006],
             array_keys($this->serverFromRoute($route)->procedures()),
         );
     }
@@ -173,58 +172,6 @@ final class SkirRouteConfigurationTest extends TestCase
             ->assertContent('"value"');
 
         $this->assertSame(0, ProviderControllerMiddleware::$invocations);
-    }
-
-    #[Test]
-    public function a_custom_codec_with_no_providers_creates_an_isolated_server(): void
-    {
-        app(SkirServer::class)->addMethod(
-            new MethodDescriptor('GlobalMethod', 5001, Type::string(), Type::string()),
-            fn (string $request): string => $request,
-        );
-
-        $route = Route::skirRpc('/custom-codec', [], new MarkerCodec);
-        $server = $this->serverFromRoute($route);
-        $server->addMethod(
-            new MethodDescriptor('RouteMethod', 5002, Type::string(), Type::string()),
-            fn (string $request): string => $request,
-        );
-
-        $this
-            ->postJson('/custom-codec', [
-                'method' => 'RouteMethod',
-                'request' => 'value',
-            ])
-            ->assertOk()
-            ->assertExactJson(['encoded' => 'value']);
-
-        $this
-            ->postJson('/custom-codec', [
-                'method' => 'GlobalMethod',
-                'request' => 'value',
-            ])
-            ->assertNotFound();
-    }
-
-    #[Test]
-    public function route_specific_codecs_do_not_leak_between_endpoints(): void
-    {
-        Route::skirRpc('/first-codec', [new RouteEchoProvider], new MarkerCodec('first'));
-        Route::skirRpc('/second-codec', [new RouteEchoProvider], new MarkerCodec('second'));
-
-        $this
-            ->postJson('/first-codec', [
-                'method' => 'Echo',
-                'request' => 'value',
-            ])
-            ->assertExactJson(['encoded' => 'first:value']);
-
-        $this
-            ->postJson('/second-codec', [
-                'method' => 'Echo',
-                'request' => 'value',
-            ])
-            ->assertExactJson(['encoded' => 'second:value']);
     }
 
     #[Test]
@@ -379,27 +326,5 @@ final class RouteEchoProvider implements ProcedureProvider
             new MethodDescriptor('Echo', 5004, Type::string(), Type::string()),
             fn (string $request): string => $request,
         );
-    }
-}
-
-final readonly class MarkerCodec implements SkirCodec
-{
-    public function __construct(
-        private string $prefix = '',
-    ) {}
-
-    public function decodeRequest(MethodDescriptor $descriptor, mixed $request): mixed
-    {
-        return $request;
-    }
-
-    /**
-     * @return array{encoded: mixed}
-     */
-    public function encodeResponse(MethodDescriptor $descriptor, mixed $response): array
-    {
-        $encoded = $this->prefix === '' ? $response : "{$this->prefix}:{$response}";
-
-        return ['encoded' => $encoded];
     }
 }

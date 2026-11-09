@@ -9,7 +9,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Skir\Runtime\MethodDescriptor;
 use Skir\Runtime\Type;
-use Skir\Server\Codecs\DenseJsonCodec;
 use Skir\Server\Exceptions\SkirServerException;
 use Skir\Server\ProcedureRegistry;
 use Skir\Server\SkirContext;
@@ -26,11 +25,11 @@ final class ProcedureRegistryTest extends TestCase
         $registry->add($descriptor, fn (float $value): float => $value * $value);
 
         $this->assertSame($descriptor, $registry->get('Square')->descriptor);
-        $this->assertSame(['Square'], array_keys($registry->all()));
+        $this->assertSame([6001], array_keys($registry->all()));
     }
 
     #[Test]
-    public function it_rejects_duplicate_procedure_names(): void
+    public function it_rejects_duplicate_method_numbers(): void
     {
         $registry = new ProcedureRegistry;
         $registry->add($this->descriptor('Square'), fn (float $value): float => $value);
@@ -41,7 +40,7 @@ final class ProcedureRegistryTest extends TestCase
         } catch (SkirServerException $exception) {
             $this->assertSame('skir_duplicate_method', $exception->errorCode);
             $this->assertSame(422, $exception->status);
-            $this->assertSame('Skir method [Square] is already registered on this endpoint.', $exception->getMessage());
+            $this->assertSame('Skir method [Square] with number [6001] is already registered on this endpoint.', $exception->getMessage());
         }
     }
 
@@ -77,11 +76,10 @@ final class ProcedureRegistryTest extends TestCase
     }
 
     #[Test]
-    public function the_server_uses_dense_json_by_default(): void
+    public function a_new_server_has_no_procedures(): void
     {
         $server = new SkirServer(new ProcedureRegistry);
 
-        $this->assertInstanceOf(DenseJsonCodec::class, $server->codec());
         $this->assertSame([], $server->procedures());
     }
 
