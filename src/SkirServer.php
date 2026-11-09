@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Skir\Server;
 
 use Skir\Runtime\MethodDescriptor;
+use Skir\Server\Contracts\PreparesProcedure;
 
 final readonly class SkirServer
 {
@@ -12,7 +13,7 @@ final readonly class SkirServer
         private ProcedureRegistry $procedures,
     ) {}
 
-    public function addMethod(MethodDescriptor $descriptor, callable $handler): void
+    public function addMethod(MethodDescriptor $descriptor, callable|PreparesProcedure $handler): void
     {
         $this->procedures->add($descriptor, $handler);
     }

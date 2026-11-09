@@ -198,7 +198,7 @@ final class LaravelControllerDispatchTest extends TestCase
     }
 
     #[Test]
-    public function it_prepares_manual_procedures_without_middleware_and_keeps_invoke_compatibility(): void
+    public function it_prepares_manual_procedures_without_middleware(): void
     {
         $descriptor = NativeDispatchMethod::HasMiddleware->descriptor();
         $context = new SkirContext(Request::create('/manual-procedure'), $descriptor);
@@ -211,7 +211,6 @@ final class LaravelControllerDispatchTest extends TestCase
 
         $this->assertSame([], $prepared->middleware);
         $this->assertSame('prepared:HasMiddleware', $prepared->invoke());
-        $this->assertSame('compatible:HasMiddleware', $procedure->invoke('compatible', $context));
     }
 
     #[Test]

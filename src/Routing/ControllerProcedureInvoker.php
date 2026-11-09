@@ -47,11 +47,6 @@ final readonly class ControllerProcedureInvoker implements PreparesProcedure
         private Container $container,
     ) {}
 
-    public function __invoke(mixed $request, SkirContext $context): mixed
-    {
-        return $this->prepare($request, $context)->invoke();
-    }
-
     public function prepare(mixed $request, SkirContext $context): PreparedProcedure
     {
         $route = $this->controllerRoute($context);

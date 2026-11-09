@@ -10,32 +10,26 @@ use Skir\Server\Contracts\PreparesProcedure;
 
 final readonly class RegisteredProcedure
 {
-    private Closure $handler;
-
-    private ?PreparesProcedure $preparer;
+    private Closure|PreparesProcedure $handler;
 
     public function __construct(
         public MethodDescriptor $descriptor,
-        callable $handler,
+        callable|PreparesProcedure $handler,
     ) {
-        $this->preparer = $handler instanceof PreparesProcedure ? $handler : null;
-        $this->handler = Closure::fromCallable($handler);
+        $this->handler = $handler instanceof PreparesProcedure
+            ? $handler
+            : Closure::fromCallable($handler);
     }
 
     public function prepare(mixed $request, SkirContext $context): PreparedProcedure
     {
-        if ($this->preparer instanceof PreparesProcedure) {
-            return $this->preparer->prepare($request, $context);
+        if ($this->handler instanceof PreparesProcedure) {
+            return $this->handler->prepare($request, $context);
         }
 
         return new PreparedProcedure(
             [],
             fn (): mixed => ($this->handler)($request, $context),
         );
-    }
-
-    public function invoke(mixed $request, SkirContext $context): mixed
-    {
-        return ($this->handler)($request, $context);
     }
 }
