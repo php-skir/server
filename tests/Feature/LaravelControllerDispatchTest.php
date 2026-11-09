@@ -35,7 +35,6 @@ use Skir\Server\Exceptions\UnsupportedTerminableMiddlewareException;
 use Skir\Server\Facades\Skir;
 use Skir\Server\Http\Requests\SkirFormRequest;
 use Skir\Server\RegisteredProcedure;
-use Skir\Server\RequestContext;
 use Skir\Server\Routing\SkirEndpointRegistry;
 use Skir\Server\SkirContext;
 use Skir\Server\SkirServer;
@@ -202,7 +201,7 @@ final class LaravelControllerDispatchTest extends TestCase
     public function it_prepares_manual_procedures_without_middleware_and_keeps_invoke_compatibility(): void
     {
         $descriptor = NativeDispatchMethod::HasMiddleware->descriptor();
-        $context = new RequestContext(Request::create('/manual-procedure'), $descriptor);
+        $context = new SkirContext(Request::create('/manual-procedure'), $descriptor);
         $procedure = new RegisteredProcedure(
             $descriptor,
             fn (string $request, SkirContext $context): string => "{$request}:{$context->method->name}",
@@ -698,12 +697,12 @@ final class LaravelControllerDispatchTest extends TestCase
         LaravelRoute $route,
         NativeDispatchMethod $method,
         array $parameters = [],
-    ): RequestContext {
+    ): SkirContext {
         $request = Request::create($route->uri(), 'POST');
         $route->parameters = $parameters;
         $request->setRouteResolver(fn (): LaravelRoute => $route);
 
-        return new RequestContext($request, $method->descriptor());
+        return new SkirContext($request, $method->descriptor());
     }
 
     private function assertTransportRequestStateRestored(string $path): void

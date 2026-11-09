@@ -104,7 +104,6 @@ final class BoostAssetsTest extends TestCase
             'Skir::controller',
             'Skir::method',
             'SkirContext',
-            'RequestContext',
             'skir-php-generator',
             'skir-laravel-data-generator',
             'skir-simple-data-objects-generator',

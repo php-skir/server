@@ -17,8 +17,8 @@ use Skir\Server\Http\Requests\SkirMethodRequestScope;
 use Skir\Server\Http\RpcRequest;
 use Skir\Server\PreparedProcedure;
 use Skir\Server\RegisteredProcedure;
-use Skir\Server\RequestContext;
 use Skir\Server\Routing\SkirEndpointRegistry;
+use Skir\Server\SkirContext;
 use Skir\Server\Studio\StudioRenderer;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -56,7 +56,7 @@ final readonly class SkirRpcController
                 $request,
                 $decodedRequest,
                 function (Request $methodRequest, mixed $decodedPayload) use ($rpcRequest, $procedure): Response {
-                    $context = new RequestContext($methodRequest, $procedure->descriptor);
+                    $context = new SkirContext($methodRequest, $procedure->descriptor);
                     $prepared = $procedure->prepare($decodedPayload, $context);
 
                     $response = (new Pipeline($this->container))

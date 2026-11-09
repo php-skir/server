@@ -32,8 +32,7 @@ Route::skirRpc('/api/skir', [
 ```
 
 Laravel's controller dispatcher resolves route parameters, contextual attributes, generated DTOs,
-Form Requests, `SkirContext`, and container dependencies. `RequestContext` remains a compatibility
-type; new code should use `SkirContext`.
+Form Requests, `SkirContext`, and container dependencies.
 
 ## Middleware and authorization boundaries
 

@@ -28,7 +28,6 @@ use Skir\Server\Http\Requests\SkirFormRequest;
 use Skir\Server\Http\Requests\SkirFormRequestResolver;
 use Skir\Server\Hydration\SkirPayloadHydrator;
 use Skir\Server\PreparedProcedure;
-use Skir\Server\RequestContext;
 use Skir\Server\SkirContext;
 use TypeError;
 
@@ -139,7 +138,7 @@ final readonly class ControllerProcedureInvoker implements PreparesProcedure
             $typeName = $type instanceof ReflectionNamedType ? $type->getName() : null;
             $isBuiltin = $type instanceof ReflectionNamedType && $type->isBuiltin();
 
-            if ($typeName === SkirContext::class || $typeName === RequestContext::class) {
+            if ($typeName === SkirContext::class) {
                 $values[] = $context;
 
                 continue;
@@ -244,7 +243,7 @@ final readonly class ControllerProcedureInvoker implements PreparesProcedure
         $type = $parameter->getType();
         $typeName = $type instanceof ReflectionNamedType ? $type->getName() : null;
 
-        if ($typeName === SkirContext::class || $typeName === RequestContext::class) {
+        if ($typeName === SkirContext::class) {
             return false;
         }
 

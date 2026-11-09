@@ -258,8 +258,6 @@ Route::skirRpc('/api/skir', [
 
 As an inheritance-based alternative, a handwritten class may extend the generated `AbstractSkirProcedures`. That base class is itself a procedure provider, so the handwritten class can be registered directly on the route.
 
-`RequestContext` remains accepted as a compatibility type in controller methods and manually registered handlers. New code should type-hint `SkirContext`. Generated procedure contracts use `SkirContext` explicitly.
-
 ## Manual registration
 
 Manual handlers are useful for tests, very small endpoints, or experiments that do not need generated provider classes.
