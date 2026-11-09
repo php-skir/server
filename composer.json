@@ -25,13 +25,13 @@
         "php": "^8.4",
         "laravel/framework": "^13.0",
         "nikic/php-parser": "^5.8",
-        "php-skir/runtime": "^0.1@dev|^0.2@dev",
+        "php-skir/runtime": "^0.2@dev",
         "symfony/process": "^7.4|^8.0"
     },
     "require-dev": {
         "laravel/pint": "^1.29",
         "orchestra/testbench": "^11.0",
-        "php-skir/client": "^0.1@dev|^0.2@dev",
+        "php-skir/client": "^0.2@dev",
         "phpunit/phpunit": "^12.5"
     },
     "autoload": {
@@ -49,14 +49,20 @@
             "type": "path",
             "url": "../runtime",
             "options": {
-                "symlink": false
+                "symlink": false,
+                "versions": {
+                    "php-skir/runtime": "0.2.x-dev"
+                }
             }
         },
         {
             "type": "path",
             "url": "../client",
             "options": {
-                "symlink": false
+                "symlink": false,
+                "versions": {
+                    "php-skir/client": "0.2.x-dev"
+                }
             }
         }
     ],

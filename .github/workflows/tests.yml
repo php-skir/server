@@ -167,8 +167,8 @@ jobs:
         run: |
           composer config minimum-stability dev
           composer config prefer-stable true
-          composer config repositories.runtime '{"type":"path","url":"../runtime","options":{"symlink":false}}' --json
-          composer config repositories.client '{"type":"path","url":"../client","options":{"symlink":false}}' --json
+          composer config repositories.runtime '{"type":"path","url":"../runtime","options":{"symlink":false,"versions":{"php-skir/runtime":"0.2.x-dev"}}}' --json
+          composer config repositories.client '{"type":"path","url":"../client","options":{"symlink":false,"versions":{"php-skir/client":"0.2.x-dev"}}}' --json
           composer config repositories.server '{"type":"path","url":"../server","options":{"symlink":false}}' --json
           if [ "${{ matrix.scenario }}" = 'both' ]
           then
