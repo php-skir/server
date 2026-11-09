@@ -10,16 +10,15 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Testing\TestResponse;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
+use Skir\Runtime\Field;
 use Skir\Runtime\MethodDescriptor;
 use Skir\Runtime\Type;
-use Skir\Server\Codecs\SkirCodecs;
 use Skir\Server\Contracts\SkirMethodReference;
 use Skir\Server\Exceptions\SkirServerException;
 use Skir\Server\Facades\Skir;
 use Skir\Server\Http\Requests\SkirFormRequest;
 use Skir\Server\SkirContext;
 use Skir\Server\Tests\TestCase;
-use TypeError;
 
 final class NullableControllerRequestTest extends TestCase
 {
@@ -39,7 +38,7 @@ final class NullableControllerRequestTest extends TestCase
 
         $this->postNullRequest('/nullable-standard', 'Standard')
             ->assertOk()
-            ->assertExactJson(['received' => null]);
+            ->assertExactJson([]);
 
         $this->assertSame(0, NullableStandardRequest::$hydrations);
     }
@@ -53,7 +52,7 @@ final class NullableControllerRequestTest extends TestCase
 
         $this->postNullRequest('/nullable-data', 'Data')
             ->assertOk()
-            ->assertExactJson(['received' => null]);
+            ->assertExactJson([]);
 
         $this->assertSame(0, NullableDataRequest::$hydrations);
     }
@@ -67,9 +66,8 @@ final class NullableControllerRequestTest extends TestCase
 
         $this->postNullRequest('/nullable-enum', 'EnumValue')
             ->assertOk()
-            ->assertExactJson(['received' => null]);
+            ->assertExactJson([]);
 
-        $this->assertSame(0, NullableRequestStatusHydrations::$count);
     }
 
     #[Test]
@@ -91,7 +89,7 @@ final class NullableControllerRequestTest extends TestCase
 
         $this->postNullRequest('/nullable-form-request/acme', 'FormRequest')
             ->assertOk()
-            ->assertExactJson(['received' => null]);
+            ->assertExactJson([]);
 
         $this->assertSame(1, NullableGeneratedFormRequest::$authorizations);
         $this->assertSame(1, NullableGeneratedFormRequest::$instances);
@@ -203,47 +201,28 @@ final class NullableControllerRequestTest extends TestCase
     }
 
     #[Test]
-    public function nonnullable_null_requests_keep_their_existing_failures(): void
+    public function null_for_a_nonnullable_struct_request_decodes_to_the_default_struct(): void
     {
         $this->registerRoute(NullableRequestMethod::NonnullableStandard, NonnullableStandardController::class);
-        $this->registerRoute(NullableRequestMethod::NonnullableFormRequest, NonnullableFormRequestController::class);
+        $this->registerRoute(NullableRequestMethod::NonnullableData, NonnullableDataController::class);
 
-        try {
-            $this->withoutExceptionHandling()
-                ->postNullRequest('/nonnullable-standard', 'NonnullableStandard');
+        $this->postNullRequest('/nonnullable-standard', 'NonnullableStandard')
+            ->assertOk()
+            ->assertExactJson(['received' => '']);
+        $this->postNullRequest('/nonnullable-data', 'NonnullableData')
+            ->assertOk()
+            ->assertExactJson(['received' => '']);
 
-            $this->fail('A nonnullable generated request must reject null.');
-        } catch (TypeError $exception) {
-            $this->assertStringContainsString('must be of type array, null given', $exception->getMessage());
-        }
-
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Skir Form Requests require a decoded array/object payload.');
-
-        $this->postNullRequest('/nonnullable-form-request', 'NonnullableFormRequest');
     }
 
     #[Test]
-    public function nonnullable_enum_null_requests_keep_their_existing_failure(): void
+    public function null_for_a_nonnullable_string_request_is_rejected(): void
     {
         $this->registerRoute(NullableRequestMethod::NonnullableEnum, NonnullableEnumController::class);
 
-        $this->withoutExceptionHandling();
-        $this->expectException(TypeError::class);
-
-        $this->postNullRequest('/nonnullable-enum', 'NonnullableEnum');
-    }
-
-    #[Test]
-    public function nonnullable_laravel_data_null_requests_keep_their_existing_failure(): void
-    {
-        $this->registerRoute(NullableRequestMethod::NonnullableData, NonnullableDataController::class);
-
-        $this->withoutExceptionHandling();
-        $this->expectException(TypeError::class);
-        $this->expectExceptionMessage('must be of type array, null given');
-
-        $this->postNullRequest('/nonnullable-data', 'NonnullableData');
+        $this->postNullRequest('/nonnullable-enum', 'NonnullableEnum')
+            ->assertUnprocessable()
+            ->assertJsonPath('error.code', 'skir_invalid_request');
     }
 
     #[Test]
@@ -288,7 +267,7 @@ final class NullableControllerRequestTest extends TestCase
     ): void {
         $route = Route::skirRpc($this->routePath($method), [
             Skir::method($method, $controller),
-        ], SkirCodecs::standardJson());
+        ]);
 
         if ($method === NullableRequestMethod::FormRequest) {
             $route->middleware('web');
@@ -356,17 +335,23 @@ enum NullableRequestMethod implements SkirMethodReference
 
     public function descriptor(): MethodDescriptor
     {
+        $named = Type::struct([Field::value('name', 0, Type::string())]);
         $requestType = match ($this) {
+            self::EnumValue => Type::optional(Type::string()),
+            self::NonnullableEnum => Type::string(),
             self::NonnullableStandard,
             self::NonnullableFormRequest,
-            self::NonnullableEnum,
-            self::NonnullableData => Type::struct([]),
-            self::ContextOnly => Type::struct([]),
+            self::NonnullableData => $named,
+            self::ContextOnly,
             self::NoPayload => Type::struct([]),
-            default => Type::optional(Type::struct([])),
+            default => Type::optional($named),
         };
+        $responseType = Type::struct([
+            Field::value('received', 0, Type::optional(Type::string())),
+            Field::value('method', 1, Type::optional(Type::string())),
+        ]);
 
-        return new MethodDescriptor($this->name, $this->value(), $requestType, Type::struct([]));
+        return new MethodDescriptor($this->name, $this->value(), $requestType, $responseType);
     }
 
     private function value(): int

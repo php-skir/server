@@ -32,20 +32,19 @@ final class SkirServerException extends RuntimeException
         return new self("Skir method [{$method}] is not registered.", 'skir_method_not_found', 404);
     }
 
-    public static function duplicateMethod(string $method): self
+    public static function duplicateMethod(string $method, int $number): self
     {
-        return new self("Skir method [{$method}] is already registered on this endpoint.", 'skir_duplicate_method', 422);
+        return new self("Skir method [{$method}] with number [{$number}] is already registered on this endpoint.", 'skir_duplicate_method', 422);
     }
 
-    public static function invalidConfiguredCodec(mixed $codec): self
+    public static function ambiguousMethod(string $method): self
     {
-        $codecType = is_string($codec) ? $codec : get_debug_type($codec);
+        return new self("Skir method name [{$method}] is ambiguous on this endpoint; call it by number instead.", 'skir_invalid_request', 422);
+    }
 
-        return new self(
-            "Configured Skir codec [{$codecType}] must implement [Skir\\Server\\Codecs\\SkirCodec].",
-            'skir_invalid_configured_codec',
-            500,
-        );
+    public static function invalidResponse(string $method, string $message): self
+    {
+        return new self("Skir method [{$method}] returned a value that cannot be serialized: {$message}", 'skir_invalid_response', 500);
     }
 
     public static function invalidRouteProvider(mixed $provider): self

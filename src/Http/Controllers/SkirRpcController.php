@@ -9,11 +9,12 @@ use Illuminate\Contracts\Container\Container;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Pipeline;
 use Illuminate\Routing\Router;
-use JsonException;
+use Skir\Runtime\DenseJson;
 use Skir\Runtime\Exceptions\SkirRuntimeException;
-use Skir\Server\Codecs\SkirCodec;
+use Skir\Runtime\ReadableJson;
 use Skir\Server\Exceptions\SkirServerException;
 use Skir\Server\Http\Requests\SkirMethodRequestScope;
+use Skir\Server\Http\RpcRequest;
 use Skir\Server\PreparedProcedure;
 use Skir\Server\RegisteredProcedure;
 use Skir\Server\RequestContext;
@@ -47,17 +48,14 @@ final readonly class SkirRpcController
                 )->header('content-type', 'text/html; charset=UTF-8');
             }
 
-            $codec = $server->codec();
-            $payload = $this->payloadFromRequest($request);
-            $method = $this->methodFromPayload($payload);
-            $procedure = $server->procedure($method);
-            $requestPayload = array_key_exists('request', $payload) ? $payload['request'] : 0;
-            $decodedRequest = $codec->decodeRequest($procedure->descriptor, $requestPayload);
+            $rpcRequest = RpcRequest::parse($this->rpcBody($request));
+            $procedure = $server->procedure($rpcRequest->method);
+            $decodedRequest = DenseJson::decode($procedure->descriptor->requestType, $rpcRequest->payload);
 
             return $this->requestScope->run(
                 $request,
                 $decodedRequest,
-                function (Request $methodRequest, mixed $decodedPayload) use ($codec, $procedure): Response {
+                function (Request $methodRequest, mixed $decodedPayload) use ($rpcRequest, $procedure): Response {
                     $context = new RequestContext($methodRequest, $procedure->descriptor);
                     $prepared = $procedure->prepare($decodedPayload, $context);
 
@@ -65,7 +63,7 @@ final readonly class SkirRpcController
                         ->send($methodRequest)
                         ->through($this->procedureMiddleware($prepared))
                         ->then(fn (): Response => $this->invokeAndEncodeResponse(
-                            $codec,
+                            $rpcRequest,
                             $procedure,
                             $prepared,
                         ));
@@ -81,25 +79,22 @@ final readonly class SkirRpcController
     }
 
     private function invokeAndEncodeResponse(
-        SkirCodec $codec,
+        RpcRequest $rpcRequest,
         RegisteredProcedure $procedure,
         PreparedProcedure $prepared,
     ): Response {
+        $result = $prepared->invoke();
+        $responseType = $procedure->descriptor->responseType;
+
         try {
-            return $this->encodeResponse($codec, $procedure, $prepared->invoke());
+            $json = $rpcRequest->readable
+                ? ReadableJson::toJson($responseType, $result)
+                : DenseJson::toJson($responseType, $result);
         } catch (SkirRuntimeException $exception) {
-            throw SkirServerException::invalidRequest($exception->getMessage());
+            throw SkirServerException::invalidResponse($procedure->descriptor->name, $exception->getMessage());
         }
-    }
 
-    private function encodeResponse(
-        SkirCodec $codec,
-        RegisteredProcedure $procedure,
-        mixed $result,
-    ): Response {
-        $encodedResponse = $codec->encodeResponse($procedure->descriptor, $result);
-
-        return response()->json($encodedResponse, Response::HTTP_OK);
+        return response($json, Response::HTTP_OK, ['Content-Type' => 'application/json']);
     }
 
     /** @return list<Closure|string> */
@@ -133,7 +128,7 @@ final readonly class SkirRpcController
 
         $queryKey = (string) ($request->route()?->defaults['skirStudioQueryKey'] ?? 'studio');
 
-        return $request->query->has($queryKey);
+        return $this->rpcBody($request) === '' || $request->query->has($queryKey);
     }
 
     private function studioEnabled(Request $request): bool
@@ -141,54 +136,13 @@ final readonly class SkirRpcController
         return ($request->route()?->defaults['skirStudioEnabled'] ?? false) === true;
     }
 
-    /**
-     * @return array{
-     *     method?: mixed,
-     *     request?: mixed
-     * }
-     */
-    private function payloadFromRequest(Request $request): array
+    private function rpcBody(Request $request): string
     {
         if ($this->usesQueryString($request)) {
-            return $this->payloadFromQueryString($request);
+            return rawurldecode((string) $request->server->get('QUERY_STRING', ''));
         }
 
-        try {
-            $decodedPayload = json_decode($request->getContent(), flags: JSON_THROW_ON_ERROR);
-        } catch (JsonException $exception) {
-            throw SkirServerException::invalidRequest("Invalid JSON: {$exception->getMessage()}");
-        }
-
-        if (! is_object($decodedPayload)) {
-            throw SkirServerException::invalidRequest('Skir requests must be JSON objects.');
-        }
-
-        return $request->json()->all();
-    }
-
-    /**
-     * @return array{
-     *     method?: mixed,
-     *     request?: mixed
-     * }
-     */
-    private function payloadFromQueryString(Request $request): array
-    {
-        $payload = [
-            'method' => $request->query('method'),
-        ];
-
-        if (! $request->query->has('request')) {
-            return $payload;
-        }
-
-        try {
-            $payload['request'] = json_decode((string) $request->query('request'), true, flags: JSON_THROW_ON_ERROR);
-        } catch (JsonException $exception) {
-            throw SkirServerException::invalidRequest("Invalid dense JSON: {$exception->getMessage()}");
-        }
-
-        return $payload;
+        return $request->getContent();
     }
 
     private function usesQueryString(Request $request): bool
@@ -198,24 +152,5 @@ final readonly class SkirRpcController
         }
 
         return $request->isMethod('HEAD');
-    }
-
-    /**
-     * @param  array{
-     *     method?: mixed,
-     *     request?: mixed
-     * }  $payload
-     */
-    private function methodFromPayload(array $payload): string
-    {
-        if (! array_key_exists('method', $payload)) {
-            throw SkirServerException::invalidRequest('Skir requests must include a string [method] value.');
-        }
-
-        if (! is_string($payload['method'])) {
-            throw SkirServerException::invalidRequest('Skir requests must include a string [method] value.');
-        }
-
-        return $payload['method'];
     }
 }

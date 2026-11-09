@@ -21,7 +21,7 @@ final class BoostAssetsTest extends TestCase
         'resources/boost/skills/skir-server-development/references/procedures-and-routing.md',
         'resources/boost/skills/skir-server-development/references/scaffolding.md',
         'resources/boost/skills/skir-server-development/references/structures-and-validation.md',
-        'resources/boost/skills/skir-server-development/references/studio-codecs-and-testing.md',
+        'resources/boost/skills/skir-server-development/references/studio-protocol-and-testing.md',
     ];
 
     #[Test]
@@ -96,7 +96,7 @@ final class BoostAssetsTest extends TestCase
         );
         $this->assertSourceAnchorsAreDocumented(
             'config/skir-server.php',
-            ['studio_enabled', 'studio_query_key', 'codec'],
+            ['studio_enabled', 'studio_query_key'],
             $guidance,
         );
 
@@ -127,9 +127,8 @@ final class BoostAssetsTest extends TestCase
             'rules()',
             'studio()',
             'studio(false)',
-            'DenseJsonCodec',
-            'StandardJsonCodec',
-            'Base64DenseJsonCodec',
+            'name:number:format:request',
+            'readable JSON',
             'skir_validation_failed',
             'skir_authorization_failed',
             'malformed',

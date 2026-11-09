@@ -17,8 +17,8 @@ boundaries.
 - Choosing or implementing generated standard PHP objects, Spatie Laravel Data objects, or Simple
   Data Objects—including input hydration and validation: read
   [structures and validation](references/structures-and-validation.md).
-- Studio exposure, codecs, failures, or test coverage: read
-  [Studio, codecs, and testing](references/studio-codecs-and-testing.md).
+- Studio exposure, the wire protocol, failures, or test coverage: read
+  [Studio, protocol, and testing](references/studio-protocol-and-testing.md).
 - Tasks crossing these areas: read every relevant reference before changing code.
 
 ## Workflow
@@ -30,4 +30,4 @@ boundaries.
 3. Implement explicit validation and authorization before registration. Decide separately whether
    method middleware or outer-route protection owns the boundary.
 4. Test success plus applicable validation, authorization, malformed input, duplicate registration,
-   Studio, middleware, and codec failures.
+   Studio, middleware, and malformed-request failures.

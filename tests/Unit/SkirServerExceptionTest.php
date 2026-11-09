@@ -43,10 +43,10 @@ final class SkirServerExceptionTest extends TestCase
                 'Skir method [Missing] is not registered.',
             ],
             'duplicate method' => [
-                SkirServerException::duplicateMethod('Duplicate'),
+                SkirServerException::duplicateMethod('Duplicate', 7),
                 'skir_duplicate_method',
                 422,
-                'Skir method [Duplicate] is already registered on this endpoint.',
+                'Skir method [Duplicate] with number [7] is already registered on this endpoint.',
             ],
             'invalid route provider' => [
                 SkirServerException::invalidRouteProvider(new InvalidRouteProvider),
@@ -62,24 +62,8 @@ final class SkirServerExceptionTest extends TestCase
                 'Skir route provider [App\\Skir\\MissingProvider] must implement '
                 .'[Skir\\Server\\Routing\\SkirRouteDefinition] or [Skir\\Server\\ProcedureProvider].',
             ],
-            'invalid configured codec' => [
-                SkirServerException::invalidConfiguredCodec('App\\Codecs\\InvalidCodec'),
-                'skir_invalid_configured_codec',
-                500,
-                'Configured Skir codec [App\\Codecs\\InvalidCodec] must implement '
-                .'[Skir\\Server\\Codecs\\SkirCodec].',
-            ],
-            'invalid configured codec type' => [
-                SkirServerException::invalidConfiguredCodec(new InvalidConfiguredCodec),
-                'skir_invalid_configured_codec',
-                500,
-                'Configured Skir codec ['.InvalidConfiguredCodec::class.'] must implement '
-                .'[Skir\\Server\\Codecs\\SkirCodec].',
-            ],
         ];
     }
 }
 
 final class InvalidRouteProvider {}
-
-final class InvalidConfiguredCodec {}

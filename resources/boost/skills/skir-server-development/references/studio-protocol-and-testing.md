@@ -1,4 +1,4 @@
-# Studio, Codecs, and Testing
+# Studio, Protocol, and Testing
 
 ## Studio exposure
 
@@ -16,14 +16,13 @@ Method middleware does not protect Studio. Put authentication and authorization 
 when Studio or every RPC call must share that boundary. Test the Studio GET independently from a
 method invocation.
 
-## Codecs
+## Protocol
 
-The configured `codec` must implement `SkirCodec`. Laravel resolves the class through the container;
-an explicit third argument to `Route::skirRpc()` overrides the package default for that route.
-
-Built-in implementations are `DenseJsonCodec`, `StandardJsonCodec`, and `Base64DenseJsonCodec`.
-The matching factories are available through `SkirCodecs`. Clients and servers must use
-the same codec.
+Endpoints speak the standard SkirRPC protocol; there is nothing to configure. A request body is
+either a JSON object `{"method": ..., "request": ...}` (answered in readable JSON) or
+`name:number:format:request` (answered in dense JSON unless the format is `readable`). `GET` carries
+the colon-separated form in the query string. Methods are looked up by number, or by name when the
+number is empty.
 
 ## Required behavior coverage
 
@@ -37,14 +36,13 @@ paths applicable to the change:
 - protected and intentionally public Studio behavior;
 - malformed JSON, missing method, unknown method, and invalid payload envelopes;
 - duplicate method registration from controllers, providers, or manual handlers;
-- configured and route-specific codec success plus invalid codec configuration;
+- both request forms (JSON object and colon-separated), lookup by name and by number;
 - controller middleware ordering, short-circuit responses, and the terminable middleware rejection;
 - regressions for explicit `null`, boundary request shapes, and any corrected failure contract.
 
 Assert status, Skir error code/details, response content type/body, authorization boundary, and side
-effects. For Studio, assert both rendered procedure metadata and protection on the outer route. For
-codec changes, use genuine encoded request/response bodies rather than treating codecs as
-interchangeable.
+effects. For Studio, assert both rendered procedure metadata and protection on the outer route. Use
+genuine encoded request/response bodies.
 
 When a test fails, first identify whether the mismatch belongs to route protection, method
 registration, Laravel resolution, payload decoding, procedure execution, or response encoding. Fix

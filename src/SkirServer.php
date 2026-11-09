@@ -5,14 +5,11 @@ declare(strict_types=1);
 namespace Skir\Server;
 
 use Skir\Runtime\MethodDescriptor;
-use Skir\Server\Codecs\DenseJsonCodec;
-use Skir\Server\Codecs\SkirCodec;
 
 final readonly class SkirServer
 {
     public function __construct(
         private ProcedureRegistry $procedures,
-        private SkirCodec $codec = new DenseJsonCodec,
     ) {}
 
     public function addMethod(MethodDescriptor $descriptor, callable $handler): void
@@ -20,18 +17,13 @@ final readonly class SkirServer
         $this->procedures->add($descriptor, $handler);
     }
 
-    public function procedure(string $method): RegisteredProcedure
+    public function procedure(string|int $method): RegisteredProcedure
     {
         return $this->procedures->get($method);
     }
 
-    public function codec(): SkirCodec
-    {
-        return $this->codec;
-    }
-
     /**
-     * @return array<string, RegisteredProcedure>
+     * @return array<int, RegisteredProcedure>
      */
     public function procedures(): array
     {

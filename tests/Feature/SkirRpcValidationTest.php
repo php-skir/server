@@ -16,8 +16,8 @@ use Skir\Server\Tests\TestCase;
 final class SkirRpcValidationTest extends TestCase
 {
     #[Test]
-    #[DataProvider('nonStringMethods')]
-    public function it_rejects_non_string_method_values(mixed $method): void
+    #[DataProvider('invalidMethods')]
+    public function it_rejects_invalid_method_values(mixed $method): void
     {
         $this
             ->postJson('/skir', [
@@ -28,7 +28,7 @@ final class SkirRpcValidationTest extends TestCase
             ->assertExactJson([
                 'error' => [
                     'code' => 'skir_invalid_request',
-                    'message' => 'Skir requests must include a string [method] value.',
+                    'message' => 'The [method] field must be a string or a number.',
                 ],
             ]);
     }
@@ -49,7 +49,7 @@ final class SkirRpcValidationTest extends TestCase
 
     #[Test]
     #[DataProvider('nonObjectJsonEnvelopes')]
-    public function it_rejects_non_object_json_envelopes(string $content): void
+    public function it_rejects_bodies_that_are_neither_json_objects_nor_colon_separated(string $content): void
     {
         $this
             ->call(
@@ -62,7 +62,7 @@ final class SkirRpcValidationTest extends TestCase
             ->assertExactJson([
                 'error' => [
                     'code' => 'skir_invalid_request',
-                    'message' => 'Skir requests must be JSON objects.',
+                    'message' => 'Skir requests must be a JSON object or [method:number:format:request].',
                 ],
             ]);
     }
@@ -73,7 +73,7 @@ final class SkirRpcValidationTest extends TestCase
         $this->registerSquare();
 
         $this
-            ->getJson('/skir?method=Square&request=%7B')
+            ->getJson('/skir?Square:1001::%7B')
             ->assertUnprocessable()
             ->assertJsonPath('error.code', 'skir_invalid_request');
     }
@@ -157,11 +157,11 @@ final class SkirRpcValidationTest extends TestCase
     /**
      * @return array<string, array{mixed}>
      */
-    public static function nonStringMethods(): array
+    public static function invalidMethods(): array
     {
         return [
             'null' => [null],
-            'integer' => [1001],
+            'boolean' => [true],
             'array' => [['Square']],
         ];
     }
