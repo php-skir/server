@@ -70,7 +70,8 @@ selectors fail generation. Standard PHP configuration must omit `config.validati
 The server hydrator prefers `makeFromSkirPayload()`, then `fromArray()`, then `fromSkirValue()`. Do
 not add competing factories to generated classes or edit their factory implementation.
 
-Direct DTO hydration and validation never perform authorization. Use Laravel middleware,
+Validation failures during direct DTO hydration return HTTP 422 `skir_validation_failed` with field
+details, like Form Request validation. Direct DTO hydration and validation never perform authorization. Use Laravel middleware,
 `#[Authorize]`, or a Form Request for that separate boundary.
 
 ## Standard PHP objects

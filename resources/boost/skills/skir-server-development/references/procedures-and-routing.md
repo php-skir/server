@@ -12,6 +12,10 @@ Attributed controllers are the primary Laravel workflow:
 ```php
 final class AccountController
 {
+    public function __construct(
+        private readonly AccountActions $accounts,
+    ) {}
+
     #[SkirMethod(AccountSkirMethod::GetMe)]
     #[Middleware('auth:sanctum')]
     #[Authorize('view-account')]
@@ -34,6 +38,11 @@ Route::skirRpc('/api/skir', [
 Laravel's controller dispatcher resolves route parameters, contextual attributes, generated DTOs,
 Form Requests, `SkirContext`, and container dependencies.
 
+Register endpoints in `routes/api.php` (`php artisan install:api` on Laravel 13); a POST endpoint in
+`routes/web.php` gets HTTP 419 unless excluded from CSRF verification. Pass class strings,
+`Skir::controller()`, or `Skir::method()` to `Route::skirRpc()`: provider instances do not survive
+`php artisan route:cache`.
+
 ## Middleware and authorization boundaries
 
 Controller-backed procedures support Laravel `#[Middleware(...)]`, `#[Authorize(...)]`, the
@@ -54,7 +63,9 @@ Both ordinary Form Requests and `SkirFormRequest` use Laravel input preparation,
 `rules()`, and after-validation hooks. A generated `SkirFormRequest` starts with `authorize()` false
 and empty `rules()`; review both before registration. Call `$request->skir()` for its typed payload.
 
-- Validation failure: HTTP 422, `skir_validation_failed`, field details under `error.details`.
+- Validation failure (Form Request, or validating DTO hydration): HTTP 422, `skir_validation_failed`,
+  field details under `error.details`.
+- Payload that cannot be passed to the request parameter: HTTP 422, `skir_invalid_request`.
 - Form Request authorization failure: HTTP 403, `skir_authorization_failed`.
 - Controller business exceptions: Laravel's normal exception handling.
 
