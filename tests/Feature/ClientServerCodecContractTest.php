@@ -73,7 +73,6 @@ final class ClientServerCodecContractTest extends TestCase
         yield 'dense JSON' => ['dense-json'];
         yield 'standard JSON' => ['standard-json'];
         yield 'base64 dense JSON' => ['base64-dense-json'];
-        yield 'CBOR' => ['cbor'];
     }
 
     private function clientCodec(string $codecName): SkirClientCodec
@@ -82,7 +81,6 @@ final class ClientServerCodecContractTest extends TestCase
             'dense-json' => SkirClientCodecs::denseJson(),
             'standard-json' => SkirClientCodecs::standardJson(),
             'base64-dense-json' => SkirClientCodecs::base64DenseJson(),
-            'cbor' => SkirClientCodecs::cbor(),
         };
     }
 
@@ -92,7 +90,6 @@ final class ClientServerCodecContractTest extends TestCase
             'dense-json' => SkirCodecs::denseJson(),
             'standard-json' => SkirCodecs::standardJson(),
             'base64-dense-json' => SkirCodecs::base64DenseJson(),
-            'cbor' => SkirCodecs::cbor(),
         };
     }
 

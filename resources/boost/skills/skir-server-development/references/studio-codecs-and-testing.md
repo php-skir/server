@@ -21,12 +21,9 @@ method invocation.
 The configured `codec` must implement `SkirCodec`. Laravel resolves the class through the container;
 an explicit third argument to `Route::skirRpc()` overrides the package default for that route.
 
-Built-in implementations are `DenseJsonCodec`, `StandardJsonCodec`, `Base64DenseJsonCodec`, and
-`CborCodec`. The matching factories are available through `SkirCodecs`. Clients and servers must use
+Built-in implementations are `DenseJsonCodec`, `StandardJsonCodec`, and `Base64DenseJsonCodec`.
+The matching factories are available through `SkirCodecs`. Clients and servers must use
 the same codec.
-
-CBOR uses `application/cbor` and requires `spomky-labs/cbor-php`. It is binary serialization, not
-privacy or encryption. Selecting it without the optional dependency fails while the route is built.
 
 ## Required behavior coverage
 
@@ -38,7 +35,7 @@ paths applicable to the change:
 - authorization HTTP 403 with `skir_authorization_failed`;
 - unauthenticated and unauthorized method calls;
 - protected and intentionally public Studio behavior;
-- malformed JSON, malformed CBOR, missing method, unknown method, and invalid payload envelopes;
+- malformed JSON, missing method, unknown method, and invalid payload envelopes;
 - duplicate method registration from controllers, providers, or manual handlers;
 - configured and route-specific codec success plus invalid codec configuration;
 - controller middleware ordering, short-circuit responses, and the terminable middleware rejection;
@@ -46,7 +43,7 @@ paths applicable to the change:
 
 Assert status, Skir error code/details, response content type/body, authorization boundary, and side
 effects. For Studio, assert both rendered procedure metadata and protection on the outer route. For
-codec changes, use genuine encoded request/response bodies rather than treating JSON and CBOR as
+codec changes, use genuine encoded request/response bodies rather than treating codecs as
 interchangeable.
 
 When a test fails, first identify whether the mismatch belongs to route protection, method

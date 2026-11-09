@@ -25,15 +25,14 @@
         "php": "^8.4",
         "laravel/framework": "^13.0",
         "nikic/php-parser": "^5.8",
-        "php-skir/runtime": "^0.1@dev",
+        "php-skir/runtime": "^0.1@dev|^0.2@dev",
         "symfony/process": "^7.4|^8.0"
     },
     "require-dev": {
         "laravel/pint": "^1.29",
         "orchestra/testbench": "^11.0",
-        "php-skir/client": "^0.1@dev",
-        "phpunit/phpunit": "^12.5",
-        "spomky-labs/cbor-php": "^3.2"
+        "php-skir/client": "^0.1@dev|^0.2@dev",
+        "phpunit/phpunit": "^12.5"
     },
     "autoload": {
         "psr-4": {
@@ -68,15 +67,12 @@
             ]
         },
         "branch-alias": {
-            "dev-main": "0.1.x-dev"
+            "dev-main": "0.2.x-dev"
         }
     },
     "scripts": {
         "format": "pint",
         "test": "phpunit"
-    },
-    "suggest": {
-        "spomky-labs/cbor-php": "Required when using SkirCodecs::cbor() for application/cbor endpoints."
     },
     "config": {
         "sort-packages": true

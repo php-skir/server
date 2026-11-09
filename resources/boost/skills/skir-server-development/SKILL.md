@@ -17,7 +17,7 @@ boundaries.
 - Choosing or implementing generated standard PHP objects, Spatie Laravel Data objects, or Simple
   Data Objects—including input hydration and validation: read
   [structures and validation](references/structures-and-validation.md).
-- Studio exposure, codecs, CBOR, failures, or test coverage: read
+- Studio exposure, codecs, failures, or test coverage: read
   [Studio, codecs, and testing](references/studio-codecs-and-testing.md).
 - Tasks crossing these areas: read every relevant reference before changing code.
 

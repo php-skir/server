@@ -23,7 +23,7 @@ SkirRPC offers many of the same benefits as gRPC—shared method definitions, ge
 - Route procedures to attributed or invokable Laravel controllers with native dependency injection, middleware, authorization, and Form Requests. See [Routing](docs/routing.md).
 - Keep generated providers and manual handlers available for non-controller layouts. See [Routing](docs/routing.md#generated-procedure-providers).
 - Inspect an endpoint's procedures through its opt-in Studio. See [Studio](docs/routing.md#studio).
-- Configure dense JSON, standard JSON, base64 dense JSON, or CBOR package-wide or per endpoint. See [Codecs](docs/codecs.md).
+- Configure dense JSON, standard JSON, or base64 dense JSON package-wide or per endpoint. See [Codecs](docs/codecs.md).
 
 ## Quick start
 

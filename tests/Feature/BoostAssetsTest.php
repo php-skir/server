@@ -130,7 +130,6 @@ final class BoostAssetsTest extends TestCase
             'DenseJsonCodec',
             'StandardJsonCodec',
             'Base64DenseJsonCodec',
-            'CborCodec',
             'skir_validation_failed',
             'skir_authorization_failed',
             'malformed',
@@ -156,14 +155,11 @@ final class BoostAssetsTest extends TestCase
             'make composer',
             'make npm',
             'make test',
-            'CBOR encrypts',
-            'CBOR is secure',
             'edit generated',
         ] as $forbiddenGuidance) {
             $this->assertStringNotContainsStringIgnoringCase($forbiddenGuidance, $guidance);
         }
 
-        $this->assertStringContainsString('serialization', $guidance);
         $this->assertStringContainsString('Do not edit', $guidance);
         $this->assertSame(
             [self::GUIDELINE, self::SKILL, ...self::REFERENCES],
