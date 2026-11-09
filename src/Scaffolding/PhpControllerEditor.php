@@ -49,7 +49,7 @@ final class PhpControllerEditor
             throw SkirScaffoldingException::invalidExistingController($path, $exception);
         }
 
-        $parser = (new ParserFactory)->createForNewestSupportedVersion();
+        $parser = (new ParserFactory)->createForHostVersion();
 
         try {
             $originalStatements = $parser->parse($source);
@@ -321,7 +321,7 @@ final class PhpControllerEditor
 
     private function parseMethod(string $methodSource): Stmt\ClassMethod
     {
-        $parser = (new ParserFactory)->createForNewestSupportedVersion();
+        $parser = (new ParserFactory)->createForHostVersion();
         $statements = $parser->parse("<?php class Generated {\n{$methodSource}\n}");
         $class = $statements[0] ?? null;
         $method = $class instanceof Stmt\Class_ ? $class->getMethods()[0] ?? null : null;
