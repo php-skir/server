@@ -72,9 +72,9 @@ final readonly class SkirRpcController
                 },
             );
         } catch (SkirServerException $exception) {
-            return $exception->toResponse();
+            return $exception->render($request);
         } catch (SkirRuntimeException $exception) {
-            return SkirServerException::invalidRequest($exception->getMessage())->toResponse();
+            return SkirServerException::invalidRequest($exception->getMessage())->render($request);
         }
     }
 
