@@ -6,9 +6,6 @@ namespace Skir\Server\Scaffolding;
 
 final readonly class ControllerScaffoldingResult
 {
-    /** @var list<string> */
-    public array $routeHints;
-
     /**
      * @param  list<string>  $createdPaths
      * @param  list<string>  $unchangedPaths
@@ -22,10 +19,5 @@ final readonly class ControllerScaffoldingResult
         public array $registrations,
         public array $updatedPaths = [],
         public array $warnings = [],
-    ) {
-        $this->routeHints = array_map(
-            static fn (RouteRegistration $registration): string => $registration->snippet(),
-            $registrations,
-        );
-    }
+    ) {}
 }

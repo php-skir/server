@@ -416,9 +416,8 @@ final class ControllerScaffolder implements ControllerScaffolding
                 throw SkirScaffoldingException::controllerChangedDuringScaffolding($destinationPath);
             }
 
-            $originalSource = $originalSnapshot->contents;
             $edited = $this->controllerEditor->edit(
-                $originalSource,
+                $originalSnapshot->contents,
                 $destinationPath,
                 $namespace,
                 $className,
@@ -429,12 +428,9 @@ final class ControllerScaffolder implements ControllerScaffolding
 
             return new RenderedController(
                 new RenderedFile($destinationPath, $edited->source),
-                $className,
-                $methods,
                 $registrations,
                 true,
                 $edited->changed,
-                $originalSource,
                 $edited->warnings,
                 $originalSnapshot,
             );
@@ -442,8 +438,6 @@ final class ControllerScaffolder implements ControllerScaffolding
 
         return new RenderedController(
             new RenderedFile($destinationPath, $source),
-            $className,
-            $methods,
             $registrations,
         );
     }

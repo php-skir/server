@@ -158,17 +158,6 @@ final class SkirScaffoldingException extends RuntimeException
         return new self("Single Skir controller [{$controller}] must be a canonical class under the application namespace.");
     }
 
-    public static function cleanupFailedAfterControllerPublication(
-        string $destinationPath,
-        string $temporaryPath,
-        Throwable $exception,
-    ): self {
-        return new self(
-            "Skir controller [{$destinationPath}] was created, but temporary file cleanup failed; remove leftover [{$temporaryPath}] manually: {$exception->getMessage()}",
-            previous: $exception,
-        );
-    }
-
     public static function plannedOutputCollision(string $firstPath, string $secondPath): self
     {
         return new self(
