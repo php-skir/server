@@ -49,13 +49,7 @@ final class SkirServerException extends RuntimeException
 
     public static function invalidRouteProvider(mixed $provider): self
     {
-        if (is_string($provider)) {
-            $providerType = $provider;
-        } elseif (is_object($provider)) {
-            $providerType = $provider::class;
-        } else {
-            $providerType = get_debug_type($provider);
-        }
+        $providerType = is_string($provider) ? $provider : get_debug_type($provider);
 
         return new self(
             "Skir route provider [{$providerType}] must implement [Skir\\Server\\Routing\\SkirRouteDefinition] or [Skir\\Server\\ProcedureProvider].",
@@ -75,7 +69,7 @@ final class SkirServerException extends RuntimeException
         return new self('This action is unauthorized.', 'skir_authorization_failed', 403);
     }
 
-    public function toResponse(): JsonResponse
+    public function render(Request $request): JsonResponse
     {
         $error = [
             'code' => $this->errorCode,
@@ -89,10 +83,5 @@ final class SkirServerException extends RuntimeException
         return response()->json([
             'error' => $error,
         ], $this->status);
-    }
-
-    public function render(Request $request): JsonResponse
-    {
-        return $this->toResponse();
     }
 }

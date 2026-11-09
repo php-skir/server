@@ -39,9 +39,9 @@ Failures return a JSON error body with a Skir error code:
 
 | Status | Code | When |
 | --- | --- | --- |
-| 422 | `skir_invalid_request` | The body is not a valid SkirRPC request, the method name is ambiguous, or the request value does not match the method's request type. |
+| 422 | `skir_invalid_request` | The body is not a valid SkirRPC request, the method name is ambiguous, the request value does not match the method's request type, or it cannot be passed to the controller's request parameter. |
 | 404 | `skir_method_not_found` | No method with that name or number is registered on the endpoint. |
-| 422 | `skir_validation_failed` | A Form Request rejected the decoded input. |
+| 422 | `skir_validation_failed` | A Form Request or a validating generated DTO (Laravel Data, Simple Data Objects) rejected the decoded input. |
 | 403 | `skir_authorization_failed` | A Form Request's `authorize()` returned `false`. |
 | 500 | `skir_invalid_response` | The method returned a value that cannot be serialized as its response type. |
 

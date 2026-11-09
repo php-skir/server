@@ -70,7 +70,7 @@ final class ProcedureRegistryTest extends TestCase
         );
         $context = new SkirContext(Request::create('/skir'), $descriptor);
 
-        $result = $registry->get('Describe')->invoke(5.0, $context);
+        $result = $registry->get('Describe')->prepare(5.0, $context)->invoke();
 
         $this->assertSame('Describe:5', $result);
     }

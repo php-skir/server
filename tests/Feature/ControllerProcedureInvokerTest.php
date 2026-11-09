@@ -13,7 +13,6 @@ use Skir\Runtime\Type;
 use Skir\Server\Attributes\SkirMethod;
 use Skir\Server\Contracts\SkirMethodReference;
 use Skir\Server\Facades\Skir;
-use Skir\Server\RequestContext;
 use Skir\Server\SkirContext;
 use Skir\Server\Tests\TestCase;
 
@@ -48,17 +47,17 @@ final class ControllerProcedureInvokerTest extends TestCase
     }
 
     #[Test]
-    public function it_injects_request_context_into_attributed_controllers(): void
+    public function it_injects_the_skir_context_into_attributed_controllers(): void
     {
-        $this->registerController('/request-context');
+        $this->registerController('/injected-context');
 
         $this
-            ->postJson('/request-context', [
-                'method' => 'RequestContext',
+            ->postJson('/injected-context', [
+                'method' => 'InjectedContext',
                 'request' => 5.0,
             ])
             ->assertOk()
-            ->assertContent(json_encode(RequestContext::class, JSON_THROW_ON_ERROR));
+            ->assertContent(json_encode(SkirContext::class, JSON_THROW_ON_ERROR));
     }
 
     #[Test]
@@ -144,7 +143,7 @@ enum InvocationSkirMethod implements SkirMethodReference
 {
     case PreferRequestHydrator;
     case PreferResponseNormalizer;
-    case RequestContext;
+    case InjectedContext;
     case Dependency;
     case StaticMethod;
     case UntypedParameter;
@@ -166,7 +165,7 @@ enum InvocationSkirMethod implements SkirMethodReference
                 Type::string(),
                 Type::string(),
             ),
-            self::RequestContext => new MethodDescriptor('RequestContext', 4003, Type::float32(), Type::string()),
+            self::InjectedContext => new MethodDescriptor('InjectedContext', 4003, Type::float32(), Type::string()),
             self::Dependency => new MethodDescriptor('Dependency', 4004, Type::float32(), Type::string()),
             self::StaticMethod => new MethodDescriptor('StaticMethod', 4005, Type::float32(), Type::float32()),
             self::UntypedParameter => new MethodDescriptor('UntypedParameter', 4006, Type::float32(), Type::float32()),
@@ -194,8 +193,8 @@ final class InvocationController
         return new PreferredResponsePayload($request);
     }
 
-    #[SkirMethod(InvocationSkirMethod::RequestContext)]
-    public function requestContext(float $request, RequestContext $context): string
+    #[SkirMethod(InvocationSkirMethod::InjectedContext)]
+    public function injectedContext(float $request, SkirContext $context): string
     {
         return $context::class;
     }

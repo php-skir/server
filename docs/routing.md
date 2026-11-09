@@ -2,6 +2,10 @@
 
 A SkirRPC endpoint is one Laravel route composed from one or more procedure sources. Attribute-based controllers are the primary Laravel-facing workflow, while invokable controllers, generated providers, and manual handlers remain available for other layouts.
 
+## Where to register endpoints
+
+Register endpoints in `routes/api.php`; on Laravel 13 run `php artisan install:api` to create it. That file's routes are prefixed with `/api`, so `Route::skirRpc('/skir')` there serves `/api/skir`. SkirRPC calls are POST requests without a CSRF token, so an endpoint in `routes/web.php` answers HTTP 419 unless its URI is excluded from CSRF verification, for example with `$middleware->validateCsrfTokens(except: ['skir'])` in `bootstrap/app.php`.
+
 ## Attributed controllers
 
 Register a controller through `Skir::controller()`:
@@ -130,10 +134,11 @@ Terminable controller middleware is not supported. A Skir method does not pass t
 
 Both ordinary Laravel `FormRequest` classes and `SkirFormRequest` subclasses use Laravel's native container resolution, input preparation, authorization, rules, and after-validation hooks. A `SkirFormRequest` additionally provides the typed `$request->skir()` method described in [Generated procedures](generated-procedures.md#request-hydration-and-validation).
 
-Failures raised while Laravel resolves these dependencies use SkirRPC error responses rather than Laravel's normal validation redirect or JSON shape:
+Failures raised while Laravel resolves these dependencies, or while a generated DTO parameter is hydrated, use SkirRPC error responses rather than Laravel's normal validation redirect or JSON shape:
 
-- failed validation returns HTTP `422` with error code `skir_validation_failed` and field errors in `error.details`;
-- failed Form Request authorization returns HTTP `403` with error code `skir_authorization_failed`.
+- failed Form Request validation, and validation thrown by DTO hydration (Laravel Data, Simple Data Objects), returns HTTP `422` with error code `skir_validation_failed` and field errors in `error.details`;
+- failed Form Request authorization returns HTTP `403` with error code `skir_authorization_failed`;
+- a payload that cannot be passed to the request parameter, such as `null` for a non-nullable DTO or Form Request, returns HTTP `422` with error code `skir_invalid_request`.
 
 Exceptions thrown by controller business logic continue through Laravel's normal exception handling.
 
@@ -162,7 +167,7 @@ Route::skirRpc('/api/skir', [
 ]);
 ```
 
-Each Skir method can be registered only once on an endpoint. Duplicate registrations throw a `SkirServerException` while the route is being built.
+Each Skir method can be registered only once on an endpoint. Duplicate registrations throw a `SkirServerException` while the route is registered. When routes are cached, the endpoint is built on its first call instead, and that call answers with a `skir_duplicate_method` error.
 
 ## Invokable controllers
 
@@ -258,8 +263,6 @@ Route::skirRpc('/api/skir', [
 
 As an inheritance-based alternative, a handwritten class may extend the generated `AbstractSkirProcedures`. That base class is itself a procedure provider, so the handwritten class can be registered directly on the route.
 
-`RequestContext` remains accepted as a compatibility type in controller methods and manually registered handlers. New code should type-hint `SkirContext`. Generated procedure contracts use `SkirContext` explicitly.
-
 ## Manual registration
 
 Manual handlers are useful for tests, very small endpoints, or experiments that do not need generated provider classes.
@@ -272,7 +275,7 @@ use Illuminate\Support\Facades\Route;
 Route::skirRpc('/api/skir');
 ```
 
-Then register a descriptor and handler on the application-wide server:
+Then register a descriptor and handler on the application-wide server from a service provider's `boot()` method:
 
 ```php
 use Skir\Runtime\MethodDescriptor;
@@ -280,19 +283,30 @@ use Skir\Runtime\Type;
 use Skir\Server\SkirContext;
 use Skir\Server\SkirServer;
 
-app(SkirServer::class)->addMethod(
-    new MethodDescriptor('Square', 1001, Type::float32(), Type::float32()),
-    fn (float $value, SkirContext $context): float => $value * $value,
-);
+public function boot(): void
+{
+    $this->app->make(SkirServer::class)->addMethod(
+        new MethodDescriptor('Square', 1001, Type::float32(), Type::float32()),
+        fn (float $value, SkirContext $context): float => $value * $value,
+    );
+}
 ```
+
+Every endpoint registered without providers shares this one application-wide server.
 
 The endpoint accepts standard SkirRPC requests, for example the body `Square:1001::5`, and answers with the encoded response value, `25`. See [Wire protocol](protocol.md) for every request form.
 
-GET requests are also supported. Pass the method and a JSON-encoded request value as query parameters:
+GET requests carry the same string in the query string:
 
 ```text
-/api/skir?method=Square&request=5.0
+/api/skir?Square:1001::5
 ```
+
+## Route caching
+
+`php artisan route:cache` works for endpoints whose providers are class strings, `Skir::controller()` definitions, or `Skir::method()` definitions that reference a generated method enum. The cached route stores that list, and the endpoint's procedures are built on its first call in each process. Without a route cache, providers are resolved and registered when the route is registered, so configuration errors surface at boot.
+
+Provider instances such as `new AdminProcedures` cannot be stored in the route cache. They work while routes are uncached; once routes are cached, calling the endpoint throws a `LogicException` naming it. Handlers added to the application-wide `SkirServer` in a service provider are unaffected, because service providers still boot when routes are cached.
 
 ## Studio
 
@@ -315,7 +329,7 @@ Route::skirRpc('/api/skir', [
 ])->studio();
 ```
 
-Calling `studio()` explicitly enables Studio for that endpoint, regardless of `studio_enabled`. With the default query key, open `/api/skir?studio` with a GET request. Only the query parameter's presence matters; its value is ignored. Studio renders only the procedures registered on that route, so separate endpoints keep separate procedure lists.
+Calling `studio()` explicitly enables Studio for that endpoint, regardless of `studio_enabled`. With the default query key, open `/api/skir?studio` with a GET request. Only the query parameter's presence matters; its value is ignored. Studio renders the procedures registered on that route. Endpoints with providers keep separate procedure lists; endpoints registered without providers all share the application-wide `SkirServer` and list the same procedures.
 
 Set `studio_enabled` to `true` to enable Studio for every SkirRPC route by default. Calling `studio(false)` on a route overrides that global setting and keeps Studio disabled for that endpoint.
 

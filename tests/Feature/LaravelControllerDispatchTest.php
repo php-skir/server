@@ -35,7 +35,7 @@ use Skir\Server\Exceptions\UnsupportedTerminableMiddlewareException;
 use Skir\Server\Facades\Skir;
 use Skir\Server\Http\Requests\SkirFormRequest;
 use Skir\Server\RegisteredProcedure;
-use Skir\Server\RequestContext;
+use Skir\Server\Routing\SkirEndpointRegistry;
 use Skir\Server\SkirContext;
 use Skir\Server\SkirServer;
 use Skir\Server\Tests\TestCase;
@@ -198,10 +198,10 @@ final class LaravelControllerDispatchTest extends TestCase
     }
 
     #[Test]
-    public function it_prepares_manual_procedures_without_middleware_and_keeps_invoke_compatibility(): void
+    public function it_prepares_manual_procedures_without_middleware(): void
     {
         $descriptor = NativeDispatchMethod::HasMiddleware->descriptor();
-        $context = new RequestContext(Request::create('/manual-procedure'), $descriptor);
+        $context = new SkirContext(Request::create('/manual-procedure'), $descriptor);
         $procedure = new RegisteredProcedure(
             $descriptor,
             fn (string $request, SkirContext $context): string => "{$request}:{$context->method->name}",
@@ -211,7 +211,6 @@ final class LaravelControllerDispatchTest extends TestCase
 
         $this->assertSame([], $prepared->middleware);
         $this->assertSame('prepared:HasMiddleware', $prepared->invoke());
-        $this->assertSame('compatible:HasMiddleware', $procedure->invoke('compatible', $context));
     }
 
     #[Test]
@@ -689,11 +688,7 @@ final class LaravelControllerDispatchTest extends TestCase
 
     private function serverFromRoute(LaravelRoute $route): SkirServer
     {
-        $server = $route->defaults['skirServer'] ?? null;
-
-        $this->assertInstanceOf(SkirServer::class, $server);
-
-        return $server;
+        return app(SkirEndpointRegistry::class)->server($route);
     }
 
     /** @param array<string, string|object|null> $parameters */
@@ -701,12 +696,12 @@ final class LaravelControllerDispatchTest extends TestCase
         LaravelRoute $route,
         NativeDispatchMethod $method,
         array $parameters = [],
-    ): RequestContext {
+    ): SkirContext {
         $request = Request::create($route->uri(), 'POST');
         $route->parameters = $parameters;
         $request->setRouteResolver(fn (): LaravelRoute => $route);
 
-        return new RequestContext($request, $method->descriptor());
+        return new SkirContext($request, $method->descriptor());
     }
 
     private function assertTransportRequestStateRestored(string $path): void

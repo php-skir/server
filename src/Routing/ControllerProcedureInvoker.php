@@ -10,6 +10,7 @@ use Illuminate\Contracts\Container\Container;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Routing\Route;
 use Illuminate\Routing\Router;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 use ReflectionClass;
 use ReflectionIntersectionType;
@@ -20,14 +21,15 @@ use ReflectionType;
 use ReflectionUnionType;
 use Skir\Server\Contracts\PreparesProcedure;
 use Skir\Server\Exceptions\AmbiguousControllerRequestException;
+use Skir\Server\Exceptions\SkirServerException;
 use Skir\Server\Exceptions\UnsupportedControllerParameterException;
 use Skir\Server\Exceptions\UnsupportedTerminableMiddlewareException;
 use Skir\Server\Http\Requests\SkirFormRequest;
 use Skir\Server\Http\Requests\SkirFormRequestResolver;
 use Skir\Server\Hydration\SkirPayloadHydrator;
 use Skir\Server\PreparedProcedure;
-use Skir\Server\RequestContext;
 use Skir\Server\SkirContext;
+use TypeError;
 
 /** @internal */
 final readonly class ControllerProcedureInvoker implements PreparesProcedure
@@ -44,11 +46,6 @@ final readonly class ControllerProcedureInvoker implements PreparesProcedure
         private SkirControllerDispatcher $dispatcher,
         private Container $container,
     ) {}
-
-    public function __invoke(mixed $request, SkirContext $context): mixed
-    {
-        return $this->prepare($request, $context)->invoke();
-    }
 
     public function prepare(mixed $request, SkirContext $context): PreparedProcedure
     {
@@ -136,7 +133,7 @@ final readonly class ControllerProcedureInvoker implements PreparesProcedure
             $typeName = $type instanceof ReflectionNamedType ? $type->getName() : null;
             $isBuiltin = $type instanceof ReflectionNamedType && $type->isBuiltin();
 
-            if ($typeName === SkirContext::class || $typeName === RequestContext::class) {
+            if ($typeName === SkirContext::class) {
                 $values[] = $context;
 
                 continue;
@@ -166,7 +163,7 @@ final readonly class ControllerProcedureInvoker implements PreparesProcedure
                 }
 
                 if (! is_array($request)) {
-                    throw new InvalidArgumentException('Skir Form Requests require a decoded array/object payload.');
+                    throw SkirServerException::invalidRequest('Skir Form Requests require a decoded array/object payload.');
                 }
 
                 continue;
@@ -180,7 +177,7 @@ final readonly class ControllerProcedureInvoker implements PreparesProcedure
                 }
 
                 if (! is_array($request)) {
-                    throw new InvalidArgumentException('Laravel Form Requests require a decoded array/object payload.');
+                    throw SkirServerException::invalidRequest('Laravel Form Requests require a decoded array/object payload.');
                 }
 
                 continue;
@@ -205,7 +202,7 @@ final readonly class ControllerProcedureInvoker implements PreparesProcedure
 
             if ($typeName !== null && $this->payloadHydrator->supports($typeName)) {
                 /** @var class-string $typeName */
-                $values[] = $this->payloadHydrator->hydrate($typeName, $request);
+                $values[] = $this->hydratePayload($typeName, $request);
 
                 continue;
             }
@@ -216,6 +213,18 @@ final readonly class ControllerProcedureInvoker implements PreparesProcedure
         }
 
         return new PreparedControllerParameters($values, $nullParameterIndexes);
+    }
+
+    /** @param class-string $typeName */
+    private function hydratePayload(string $typeName, mixed $request): object
+    {
+        try {
+            return $this->payloadHydrator->hydrate($typeName, $request);
+        } catch (ValidationException $exception) {
+            throw SkirServerException::validationFailed($exception->errors());
+        } catch (TypeError) {
+            throw SkirServerException::invalidRequest('The request payload does not match the expected request type.');
+        }
     }
 
     private function isDirectRequestParameter(
@@ -229,7 +238,7 @@ final readonly class ControllerProcedureInvoker implements PreparesProcedure
         $type = $parameter->getType();
         $typeName = $type instanceof ReflectionNamedType ? $type->getName() : null;
 
-        if ($typeName === SkirContext::class || $typeName === RequestContext::class) {
+        if ($typeName === SkirContext::class) {
             return false;
         }
 

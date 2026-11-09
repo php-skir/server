@@ -16,7 +16,7 @@ use Skir\Server\Contracts\SkirMethodReference;
 use Skir\Server\Exceptions\SkirServerException;
 use Skir\Server\Facades\Skir;
 use Skir\Server\ProcedureProvider;
-use Skir\Server\RequestContext;
+use Skir\Server\Routing\SkirEndpointRegistry;
 use Skir\Server\SkirContext;
 use Skir\Server\SkirServer;
 use Skir\Server\Tests\TestCase;
@@ -156,7 +156,7 @@ final class SkirRpcControllerTest extends TestCase
 
         app(SkirServer::class)->addMethod(
             new MethodDescriptor('RenameUser', 1002, $userType, $userType),
-            fn (array $user, RequestContext $context): array => [
+            fn (array $user, SkirContext $context): array => [
                 'id' => $user['id'],
                 'name' => "{$user['name']} from {$context->request->ip()}",
             ],
@@ -261,13 +261,11 @@ final class SkirRpcControllerTest extends TestCase
         $route = Route::skirRpc('/provider-rpc', [
             SquareProcedureProvider::class,
         ]);
-        $server = $route->defaults['skirServer'] ?? null;
-
-        $this->assertInstanceOf(SkirServer::class, $server);
+        $server = app(SkirEndpointRegistry::class)->server($route);
 
         $prepared = $server->procedure('Square')->prepare(
             5.0,
-            new RequestContext(Request::create('/provider-rpc', 'POST'), TestSkirMethod::Square->descriptor()),
+            new SkirContext(Request::create('/provider-rpc', 'POST'), TestSkirMethod::Square->descriptor()),
         );
 
         $this->assertSame([], $prepared->middleware);
@@ -456,7 +454,7 @@ final class SkirRpcControllerTest extends TestCase
     #[Test]
     public function it_keeps_request_context_as_a_compatibility_type(): void
     {
-        $context = new RequestContext(
+        $context = new SkirContext(
             request: request(),
             method: new MethodDescriptor('Compat', 2002, Type::float32(), Type::float32()),
         );

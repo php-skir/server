@@ -10,6 +10,7 @@ use RuntimeException;
 use Skir\Server\Exceptions\SkirScaffoldingException;
 use Skir\Server\Scaffolding\AtomicFilePublisher;
 use Skir\Server\Scaffolding\ControllerScaffolder;
+use Skir\Server\Scaffolding\ControllerScaffoldingResult;
 use Skir\Server\Scaffolding\ControllerStyle;
 use Skir\Server\Scaffolding\FormRequestScaffolder;
 use Skir\Server\Scaffolding\Manifest\SkirMethodDefinition;
@@ -151,7 +152,7 @@ final class ControllerScaffolderTest extends TestCase
         ], $result->registrations);
         self::assertSame([
             '\\Skir\\Server\\Facades\\Skir::controller(\\App\\Skir\\Admin\\Users\\UsersController::class)',
-        ], $result->routeHints);
+        ], $this->routeHints($result));
         self::assertFileExists($path);
 
         $source = file_get_contents($path);
@@ -183,7 +184,7 @@ final class ControllerScaffolderTest extends TestCase
         self::assertSame([
             '\\Skir\\Server\\Facades\\Skir::method(\\App\\Skir\\Methods\\AdminUsersMethod::GetUser, \\App\\Skir\\Admin\\Users\\GetUserController::class)',
             '\\Skir\\Server\\Facades\\Skir::method(\\App\\Skir\\Methods\\AdminUsersMethod::DeleteUser, \\App\\Skir\\Admin\\Users\\DeleteUserController::class)',
-        ], $result->routeHints);
+        ], $this->routeHints($result));
         self::assertSame('App\\Skir\\Admin\\Users\\GetUserController', $result->registrations[0]->controllerClass);
         self::assertSame('App\\Skir\\Methods\\AdminUsersMethod', $result->registrations[0]->enumClass);
         self::assertSame('GetUser', $result->registrations[0]->enumCase);
@@ -217,7 +218,7 @@ final class ControllerScaffolderTest extends TestCase
         self::assertSame([$path], $result->createdPaths);
         self::assertSame([
             '\\Skir\\Server\\Facades\\Skir::controller(\\App\\Skir\\SkirController::class)',
-        ], $result->routeHints);
+        ], $this->routeHints($result));
         self::assertStringContainsString('public function getInvoice(string $request, SkirContext $context): ?int', (string) file_get_contents($path));
 
         unlink($path);
@@ -2140,6 +2141,15 @@ PHP;
         self::assertIsString($failingTemp);
         self::assertFileExists($failingTemp);
         self::assertCount(2, glob(dirname($controllerPath).'/.skir-*') ?: []);
+    }
+
+    /** @return list<string> */
+    private function routeHints(ControllerScaffoldingResult $result): array
+    {
+        return array_map(
+            static fn (RouteRegistration $registration): string => $registration->snippet(),
+            $result->registrations,
+        );
     }
 
     private function method(

@@ -440,6 +440,58 @@ final class SkirFormRequestTest extends TestCase
     }
 
     #[Test]
+    public function it_returns_direct_payload_validation_failures_as_skir_errors(): void
+    {
+        Route::skirRpc('/validated-direct-payload-rpc', [
+            Skir::method(FormRequestSkirMethod::DirectUser, ValidatedDirectPayloadController::class),
+        ]);
+
+        $this
+            ->postJson('/validated-direct-payload-rpc', [
+                'method' => 'DirectUser',
+                'request' => [
+                    'id' => 42,
+                    'name' => '',
+                ],
+            ])
+            ->assertUnprocessable()
+            ->assertExactJson([
+                'error' => [
+                    'code' => 'skir_validation_failed',
+                    'message' => 'The given data was invalid.',
+                    'details' => [
+                        'name' => ['The name field is required.'],
+                    ],
+                ],
+            ]);
+    }
+
+    #[Test]
+    public function it_returns_direct_payload_validation_failures_as_skir_errors_without_a_json_accept_header(): void
+    {
+        Route::skirRpc('/validated-direct-payload-rpc', [
+            Skir::method(FormRequestSkirMethod::DirectUser, ValidatedDirectPayloadController::class),
+        ])->middleware('web');
+
+        $this
+            ->call(
+                'POST',
+                '/validated-direct-payload-rpc',
+                server: ['CONTENT_TYPE' => 'application/json'],
+                content: json_encode([
+                    'method' => 'DirectUser',
+                    'request' => [
+                        'id' => 42,
+                        'name' => '',
+                    ],
+                ], JSON_THROW_ON_ERROR),
+            )
+            ->assertUnprocessable()
+            ->assertJsonPath('error.code', 'skir_validation_failed')
+            ->assertJsonPath('error.details.name', ['The name field is required.']);
+    }
+
+    #[Test]
     public function it_rejects_multiple_direct_skir_request_parameters_before_hydration(): void
     {
         AmbiguousResolverMutationMiddleware::$invocations = 0;
@@ -1079,6 +1131,14 @@ final class DirectPayloadController
     }
 }
 
+final class ValidatedDirectPayloadController
+{
+    public function __invoke(ValidatedUserPayload $payload): FromArrayUserPayload
+    {
+        return new FromArrayUserPayload($payload->id, $payload->name);
+    }
+}
+
 #[ControllerMiddlewareAttribute(AmbiguousResolverMutationMiddleware::class)]
 final class AmbiguousDirectPayloadController
 {
@@ -1174,6 +1234,26 @@ final readonly class FromArrayUserPayload
             'id' => $this->id,
             'name' => $this->name,
         ];
+    }
+}
+
+final readonly class ValidatedUserPayload
+{
+    public function __construct(
+        public int $id,
+        public string $name,
+    ) {}
+
+    /** @param array{id: int, name: string} $payload */
+    public static function fromArray(array $payload): self
+    {
+        if ($payload['name'] === '') {
+            throw ValidationException::withMessages([
+                'name' => ['The name field is required.'],
+            ]);
+        }
+
+        return new self($payload['id'], $payload['name']);
     }
 }
 

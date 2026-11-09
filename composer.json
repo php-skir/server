@@ -7,7 +7,6 @@
         "laravel",
         "php",
         "rpc",
-        "serialization",
         "skir"
     ],
     "homepage": "https://github.com/php-skir/server",

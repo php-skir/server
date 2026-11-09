@@ -17,15 +17,15 @@ use Skir\Server\Http\Requests\SkirMethodRequestScope;
 use Skir\Server\Http\RpcRequest;
 use Skir\Server\PreparedProcedure;
 use Skir\Server\RegisteredProcedure;
-use Skir\Server\RequestContext;
-use Skir\Server\SkirServer;
+use Skir\Server\Routing\SkirEndpointRegistry;
+use Skir\Server\SkirContext;
 use Skir\Server\Studio\StudioRenderer;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class SkirRpcController
 {
     public function __construct(
-        private SkirServer $server,
+        private SkirEndpointRegistry $endpoints,
         private StudioRenderer $studioRenderer,
         private Container $container,
         private SkirMethodRequestScope $requestScope,
@@ -35,7 +35,7 @@ final readonly class SkirRpcController
     public function __invoke(Request $request): Response
     {
         try {
-            $server = $this->serverFromRequest($request);
+            $server = $this->endpoints->server($request->route());
 
             if ($this->isStudioRequest($request)) {
                 if (! $this->studioEnabled($request)) {
@@ -56,7 +56,7 @@ final readonly class SkirRpcController
                 $request,
                 $decodedRequest,
                 function (Request $methodRequest, mixed $decodedPayload) use ($rpcRequest, $procedure): Response {
-                    $context = new RequestContext($methodRequest, $procedure->descriptor);
+                    $context = new SkirContext($methodRequest, $procedure->descriptor);
                     $prepared = $procedure->prepare($decodedPayload, $context);
 
                     $response = (new Pipeline($this->container))
@@ -72,9 +72,9 @@ final readonly class SkirRpcController
                 },
             );
         } catch (SkirServerException $exception) {
-            return $exception->toResponse();
+            return $exception->render($request);
         } catch (SkirRuntimeException $exception) {
-            return SkirServerException::invalidRequest($exception->getMessage())->toResponse();
+            return SkirServerException::invalidRequest($exception->getMessage())->render($request);
         }
     }
 
@@ -107,17 +107,6 @@ final readonly class SkirRpcController
         }
 
         return $prepared->middleware;
-    }
-
-    private function serverFromRequest(Request $request): SkirServer
-    {
-        $server = $request->route()?->defaults['skirServer'] ?? null;
-
-        if ($server instanceof SkirServer) {
-            return $server;
-        }
-
-        return $this->server;
     }
 
     private function isStudioRequest(Request $request): bool

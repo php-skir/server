@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Skir\Server;
 
 use Skir\Runtime\MethodDescriptor;
+use Skir\Server\Contracts\PreparesProcedure;
 use Skir\Server\Exceptions\SkirServerException;
 
 final class ProcedureRegistry
@@ -12,7 +13,7 @@ final class ProcedureRegistry
     /** @var array<int, RegisteredProcedure> */
     private array $procedures = [];
 
-    public function add(MethodDescriptor $descriptor, callable $handler): void
+    public function add(MethodDescriptor $descriptor, callable|PreparesProcedure $handler): void
     {
         if (array_key_exists($descriptor->number, $this->procedures)) {
             throw SkirServerException::duplicateMethod($descriptor->name, $descriptor->number);

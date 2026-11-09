@@ -10,11 +10,11 @@
 
 Laravel package for exposing SkirRPC methods from a Laravel application.
 
+Requires PHP 8.4+, Laravel 13, and Node.js for the Skir compiler.
+
 ## Why Skir?
 
-[Skir](https://skir.build/) is a modern schema language for defining data models and APIs. You describe your structs, enums, and RPC methods once in `.skir` files, then generate clean, idiomatic, and type-safe code across your stack. Skir includes generators for TypeScript, Python, Java, Go, C#, C++, Kotlin, Rust, Swift, and more, while the PHP generators in this ecosystem bring the same schema-first workflow to Laravel. This gives your backend, frontend, and other services a shared source of truth instead of separately maintained DTOs and API contracts.
-
-SkirRPC offers many of the same benefits as gRPC—shared method definitions, generated clients and servers, and end-to-end type safety—but runs over standard HTTP requests and integrates with the frameworks you already use. This package brings that workflow to Laravel: generated contracts handle serialization and type information, while your procedures remain ordinary Laravel controllers resolved through the container.
+[Skir](https://skir.build/) is a schema language: you define structs, enums, and RPC methods once and generate typed code for PHP, TypeScript, Python, Go, and other languages. This package serves those methods over SkirRPC from ordinary Laravel controllers.
 
 ## Features
 
@@ -27,7 +27,7 @@ SkirRPC offers many of the same benefits as gRPC—shared method definitions, ge
 
 ## Quick start
 
-Install the server package and one PHP generator. This example uses Simple Data Objects:
+Install the server package and one PHP generator. This example uses Simple Data Objects; see [Generated procedures](docs/generated-procedures.md) for Laravel Data and standard PHP objects:
 
 ```bash
 composer require php-skir/server std-out/simple-data-objects
@@ -68,7 +68,7 @@ generators:
       namespace: Skir
 ```
 
-Skir requires every output directory to end in `/skirout`. It owns that directory and may replace or remove files inside it, so keep handwritten application code elsewhere.
+Skir owns the `/skirout` directory and may replace files inside it, so keep handwritten code elsewhere.
 
 Generate the PHP contracts, configure Composer, and refresh the autoloader:
 
@@ -90,13 +90,15 @@ The `configure-composer` command reads `skir.yml` and adds this PSR-4 mapping to
 }
 ```
 
-Keep controllers outside `skirout`; the default application-owned namespace is `App\Skir`. Scaffold every generated method and its Form Request with:
+Besides the PHP contracts, the generator writes `skir-server-manifest.json` into its `outDir`. `php artisan skir:make` reads the manifests listed in the `skir-server.manifests` config key, which defaults to `app/Skir/skirout/skir-server-manifest.json`, so this layout needs no configuration. Rerun `npx skir gen` (or pass `--generate`) whenever the schema changes.
+
+Scaffold every generated method and its Form Request into the application-owned `App\Skir` namespace with:
 
 ```bash
 php artisan skir:make --all
 ```
 
-Generated Form Requests deny access by default; define their `authorize()` and `rules()` methods before exposing the procedure. The command prints the route registrations to add. A module controller has this shape:
+Generated Form Requests deny access by default; define their `authorize()` and `rules()` methods before exposing the procedure. Scaffolded controller methods throw a `LogicException` until you implement them. The command prints the route registrations to add. After implementation, a module controller looks like this:
 
 ```php
 <?php
@@ -127,17 +129,19 @@ final class AdminController
 }
 ```
 
-Register the controller on a SkirRPC endpoint:
+Register the controller on a SkirRPC endpoint in `routes/api.php` (create it with `php artisan install:api` on Laravel 13):
 
 ```php
 use App\Skir\Admin\AdminController;
 use Illuminate\Support\Facades\Route;
 use Skir\Server\Facades\Skir;
 
-Route::skirRpc('/api/skir', [
+Route::skirRpc('/skir', [
     Skir::controller(AdminController::class),
 ])->studio();
 ```
+
+The API routes file adds the `/api` prefix, so this endpoint serves `/api/skir`. A POST endpoint in `routes/web.php` fails CSRF verification with HTTP 419 unless its URI is excluded. Class strings, `Skir::controller()`, and `Skir::method()` registrations survive `php artisan route:cache`; provider instances do not. See [Routing](docs/routing.md#route-caching).
 
 Only public controller methods carrying a `SkirMethod` attribute are registered. The generated enum case identifies the Skir method; the PHP method name does not.
 

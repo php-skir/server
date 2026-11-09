@@ -30,7 +30,8 @@ Use PHPUnit feature tests at the Laravel boundary and never call a real external
 paths applicable to the change:
 
 - valid decoded request, exact encoded response, and persisted/application side effects;
-- validation HTTP 422 with `skir_validation_failed` and field details;
+- validation HTTP 422 with `skir_validation_failed` and field details, from Form Requests and from
+  validating DTO hydration;
 - authorization HTTP 403 with `skir_authorization_failed`;
 - unauthenticated and unauthorized method calls;
 - protected and intentionally public Studio behavior;
