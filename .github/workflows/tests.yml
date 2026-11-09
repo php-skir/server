@@ -128,9 +128,9 @@ jobs:
           composer config repositories.server '{"type":"path","url":"../server","options":{"symlink":false}}' --json
           if [ "${{ matrix.scenario }}" = 'both' ]
           then
-            composer require php-skir/server:dev-main php-skir/client:dev-main --no-interaction --no-progress
+            composer require "php-skir/server:*@dev" "php-skir/client:*@dev" --no-interaction --no-progress
           else
-            composer require php-skir/server:dev-main --no-interaction --no-progress
+            composer require "php-skir/server:*@dev" --no-interaction --no-progress
           fi
           composer require laravel/boost:^2.4 --dev --no-interaction --no-progress
           test ! -L vendor/php-skir/server
