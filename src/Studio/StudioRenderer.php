@@ -4,239 +4,30 @@ declare(strict_types=1);
 
 namespace Skir\Server\Studio;
 
-use Skir\Runtime\Field;
-use Skir\Runtime\MethodDescriptor;
-use Skir\Runtime\Type;
-use Skir\Runtime\Variant;
-use Skir\Server\RegisteredProcedure;
-use Skir\Server\SkirServer;
-
+/**
+ * The page that hosts the official RPC Studio app (https://skir.build/docs/skirrpc#rpc-studio).
+ *
+ * The app is one script. It reads the endpoint's method list from `?list` and calls the methods itself.
+ */
 final class StudioRenderer
 {
-    public function render(SkirServer $server, string $endpoint): string
+    public function render(string $appJsUrl): string
     {
-        $metadata = [
-            'endpoint' => $endpoint,
-            'methods' => array_values(array_map(
-                fn (RegisteredProcedure $procedure): array => $this->methodToArray($procedure->descriptor),
-                $server->procedures(),
-            )),
-        ];
-
-        $encodedMetadata = htmlspecialchars(
-            json_encode($metadata, JSON_THROW_ON_ERROR),
-            ENT_QUOTES | ENT_SUBSTITUTE,
-            'UTF-8',
-        );
-
-        $methodRows = implode('', array_map(
-            fn (array $method): string => $this->renderMethod($method),
-            $metadata['methods'],
-        ));
-
-        if ($methodRows === '') {
-            $methodRows = '<p class="empty">No Skir procedures are registered for this endpoint.</p>';
-        }
-
-        $escapedEndpoint = $this->escape($endpoint);
+        $escapedAppJsUrl = htmlspecialchars($appJsUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
         return <<<HTML
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Skir RPC Studio</title>
-    <style>
-        :root {
-            color-scheme: light;
-            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            color: #172033;
-            background: #f7f8fb;
-        }
-
-        body {
-            margin: 0;
-            padding: 32px;
-        }
-
-        main {
-            max-width: 960px;
-            margin: 0 auto;
-        }
-
-        h1 {
-            margin: 0 0 8px;
-            font-size: 28px;
-            line-height: 1.2;
-        }
-
-        .endpoint {
-            margin: 0 0 24px;
-            color: #536179;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        }
-
-        .method {
-            margin-bottom: 12px;
-            border: 1px solid #d9dfeb;
-            border-radius: 8px;
-            background: #ffffff;
-            padding: 16px;
-        }
-
-        .method h2 {
-            margin: 0 0 12px;
-            font-size: 18px;
-        }
-
-        dl {
-            display: grid;
-            grid-template-columns: 120px 1fr;
-            gap: 8px 16px;
-            margin: 0;
-        }
-
-        dt {
-            color: #536179;
-        }
-
-        dd {
-            margin: 0;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        }
-
-        .empty {
-            color: #536179;
-        }
-    </style>
-</head>
-<body>
-    <main data-skir-studio="{$encodedMetadata}">
-        <h1>Skir RPC Studio</h1>
-        <p class="endpoint">{$escapedEndpoint}</p>
-        {$methodRows}
-    </main>
-</body>
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>RPC Studio</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐙</text></svg>">
+    <script src="{$escapedAppJsUrl}"></script>
+  </head>
+  <body style="margin: 0; padding: 0;">
+    <skir-studio-app></skir-studio-app>
+  </body>
 </html>
 HTML;
-    }
-
-    /**
-     * @return array{
-     *     name: string,
-     *     number: int,
-     *     request: array<string, mixed>,
-     *     response: array<string, mixed>
-     * }
-     */
-    private function methodToArray(MethodDescriptor $descriptor): array
-    {
-        return [
-            'name' => $descriptor->name,
-            'number' => $descriptor->number,
-            'request' => $this->typeToArray($descriptor->requestType),
-            'response' => $this->typeToArray($descriptor->responseType),
-        ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function typeToArray(Type $type): array
-    {
-        $payload = [
-            'kind' => $type->kind->value,
-        ];
-
-        if ($type->itemType !== null) {
-            $payload['item'] = $this->typeToArray($type->itemType);
-        }
-
-        if ($type->fields !== []) {
-            $payload['fields'] = array_map(
-                fn (Field $field): array => $this->fieldToArray($field),
-                $type->fields,
-            );
-        }
-
-        if ($type->variants !== []) {
-            $payload['variants'] = array_map(
-                fn (Variant $variant): array => $this->variantToArray($variant),
-                $type->variants,
-            );
-        }
-
-        return $payload;
-    }
-
-    /**
-     * @return array{name: string|null, number: int, removed: bool, type?: array<string, mixed>}
-     */
-    private function fieldToArray(Field $field): array
-    {
-        $payload = [
-            'name' => $field->name,
-            'number' => $field->number,
-            'removed' => $field->removed,
-        ];
-
-        if ($field->type !== null) {
-            $payload['type'] = $this->typeToArray($field->type);
-        }
-
-        return $payload;
-    }
-
-    /**
-     * @return array{name: string, number: int, payload?: array<string, mixed>}
-     */
-    private function variantToArray(Variant $variant): array
-    {
-        $payload = [
-            'name' => $variant->name,
-            'number' => $variant->number,
-        ];
-
-        if ($variant->payloadType !== null) {
-            $payload['payload'] = $this->typeToArray($variant->payloadType);
-        }
-
-        return $payload;
-    }
-
-    /**
-     * @param  array{
-     *     name: string,
-     *     number: int,
-     *     request: array<string, mixed>,
-     *     response: array<string, mixed>
-     * }  $method
-     */
-    private function renderMethod(array $method): string
-    {
-        $name = $this->escape($method['name']);
-        $number = (string) $method['number'];
-        $request = $this->escape(json_encode($method['request'], JSON_THROW_ON_ERROR));
-        $response = $this->escape(json_encode($method['response'], JSON_THROW_ON_ERROR));
-
-        return <<<HTML
-<section class="method">
-    <h2>{$name}</h2>
-    <dl>
-        <dt>Number</dt>
-        <dd>{$number}</dd>
-        <dt>Request</dt>
-        <dd>{$request}</dd>
-        <dt>Response</dt>
-        <dd>{$response}</dd>
-    </dl>
-</section>
-HTML;
-    }
-
-    private function escape(string $value): string
-    {
-        return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 }

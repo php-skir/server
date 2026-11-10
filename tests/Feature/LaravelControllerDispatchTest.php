@@ -547,7 +547,7 @@ final class LaravelControllerDispatchTest extends TestCase
         $this->registerController('/protected-studio', MethodMiddlewareController::class)->studio();
 
         $this
-            ->get('/protected-studio?studio')
+            ->get('/protected-studio?list')
             ->assertOk()
             ->assertSee('GetMe');
 
