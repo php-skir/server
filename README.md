@@ -22,7 +22,7 @@ Requires PHP 8.4+, Laravel 13, and Node.js for the Skir compiler.
 - Scaffold application-owned controllers and Form Requests from generated manifests. See [Scaffolding](docs/scaffolding.md).
 - Route procedures to attributed or invokable Laravel controllers with native dependency injection, middleware, authorization, and Form Requests. See [Routing](docs/routing.md).
 - Keep generated providers and manual handlers available for non-controller layouts. See [Routing](docs/routing.md#generated-procedure-providers).
-- Inspect an endpoint's procedures through its opt-in Studio. See [Studio](docs/routing.md#studio).
+- Browse and call an endpoint's procedures in Skir's RPC Studio, opt-in per endpoint. See [Studio](docs/routing.md#studio).
 - Speak the standard SkirRPC protocol, so clients generated for any Skir language can call your endpoints. See [Wire protocol](docs/protocol.md).
 
 ## Quick start

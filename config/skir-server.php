@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'studio_enabled' => env('SKIR_SERVER_STUDIO_ENABLED', false),
     'studio_query_key' => env('SKIR_SERVER_STUDIO_QUERY_KEY', 'studio'),
+    'studio_app_js_url' => env('SKIR_SERVER_STUDIO_APP_JS_URL', 'https://cdn.jsdelivr.net/npm/skir-studio/dist/skir-studio-standalone.js'),
 
     'manifests' => [
         base_path('app/Skir/skirout/skir-server-manifest.json'),

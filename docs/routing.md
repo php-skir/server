@@ -315,7 +315,10 @@ Studio is controlled by these settings in `config/skir-server.php`:
 ```php
 'studio_enabled' => env('SKIR_SERVER_STUDIO_ENABLED', false),
 'studio_query_key' => env('SKIR_SERVER_STUDIO_QUERY_KEY', 'studio'),
+'studio_app_js_url' => env('SKIR_SERVER_STUDIO_APP_JS_URL', 'https://cdn.jsdelivr.net/npm/skir-studio/dist/skir-studio-standalone.js'),
 ```
+
+Studio is Skir's [RPC Studio](https://skir.build/docs/skirrpc#rpc-studio): a page to browse an endpoint's methods, fill in a request, send it and read the response. The endpoint serves a small HTML page that loads the Studio app from `studio_app_js_url`; point that setting at your own copy of the script when the app must not come from a CDN.
 
 Studio is disabled by default. Enable it on an individual endpoint with `studio()`:
 
@@ -330,6 +333,14 @@ Route::skirRpc('/api/skir', [
 ```
 
 Calling `studio()` explicitly enables Studio for that endpoint, regardless of `studio_enabled`. With the default query key, open `/api/skir?studio` with a GET request. Only the query parameter's presence matters; its value is ignored. Studio renders the procedures registered on that route. Endpoints with providers keep separate procedure lists; endpoints registered without providers all share the application-wide `SkirServer` and list the same procedures.
+
+### Method list
+
+The Studio app reads the endpoint's methods from a GET request to `/api/skir?list`. The answer follows the upstream Skir services: every method with its name, number, and the type descriptors of its request and response. The list is available only while Studio is enabled for the endpoint; otherwise it answers `404`.
+
+The PHP runtime types carry no record names, so the names in the list are derived. A method's request and response are named `<Method>Request` and `<Method>Response`, and a nested struct or enum is named after the field or variant that holds it. Structs and enums with the same shape share one definition. These names only label the Studio forms; they do not affect the wire format.
+
+Studio sends its calls from the browser as `{"method": ..., "request": ...}` POST requests, with the `Authorization` header you enter in the app. Outer route middleware applies to the Studio page, the method list, and every call.
 
 Set `studio_enabled` to `true` to enable Studio for every SkirRPC route by default. Calling `studio(false)` on a route overrides that global setting and keeps Studio disabled for that endpoint.
 

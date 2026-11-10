@@ -41,7 +41,7 @@ final class SkirServerConfigurationTest extends TestCase
             ->get('/configured-studio?studio')
             ->assertOk()
             ->assertHeader('content-type', 'text/html; charset=UTF-8')
-            ->assertSee('Skir RPC Studio');
+            ->assertSee('skir-studio-app');
     }
 
     #[Test]
@@ -73,13 +73,13 @@ final class SkirServerConfigurationTest extends TestCase
         $this
             ->get('/configured-studio-query-key?studio')
             ->assertUnprocessable()
-            ->assertDontSee('Skir RPC Studio');
+            ->assertDontSee('skir-studio-app');
 
         $this
             ->get('/configured-studio-query-key?skir-studio')
             ->assertOk()
             ->assertHeader('content-type', 'text/html; charset=UTF-8')
-            ->assertSee('Skir RPC Studio');
+            ->assertSee('skir-studio-app');
     }
 
     #[Test]
@@ -103,12 +103,12 @@ final class SkirServerConfigurationTest extends TestCase
             ->get('/snapshotted-studio?registered-studio')
             ->assertOk()
             ->assertHeader('content-type', 'text/html; charset=UTF-8')
-            ->assertSee('Skir RPC Studio');
+            ->assertSee('skir-studio-app');
 
         $this
             ->get('/snapshotted-studio?changed-studio')
             ->assertUnprocessable()
-            ->assertDontSee('Skir RPC Studio');
+            ->assertDontSee('skir-studio-app');
     }
 
     #[Test]

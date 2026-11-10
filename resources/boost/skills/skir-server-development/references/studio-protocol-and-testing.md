@@ -6,6 +6,10 @@ Studio is disabled by default. Enable it per route with `studio()` or override a
 `studio(false)`. Package configuration uses `studio_enabled` and `studio_query_key`; the query key
 only selects the Studio response and is never access control.
 
+Studio is the official Skir RPC Studio app, loaded from `studio_app_js_url`. It reads the endpoint's
+methods from `GET <endpoint>?list`, which answers `404` unless Studio is enabled, and sends calls as
+readable JSON POST requests.
+
 ```php
 Route::skirRpc('/api/skir', [
     Skir::controller(AccountController::class),
@@ -42,7 +46,7 @@ paths applicable to the change:
 - regressions for explicit `null`, boundary request shapes, and any corrected failure contract.
 
 Assert status, Skir error code/details, response content type/body, authorization boundary, and side
-effects. For Studio, assert both rendered procedure metadata and protection on the outer route. Use
+effects. For Studio, assert the `?list` method metadata and protection on the outer route. Use
 genuine encoded request/response bodies.
 
 When a test fails, first identify whether the mismatch belongs to route protection, method

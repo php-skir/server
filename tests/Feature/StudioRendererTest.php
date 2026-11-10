@@ -6,26 +6,34 @@ namespace Skir\Server\Tests\Feature;
 
 use Illuminate\Support\Facades\Route;
 use PHPUnit\Framework\Attributes\Test;
-use Skir\Runtime\Field;
-use Skir\Runtime\MethodDescriptor;
-use Skir\Runtime\Type;
-use Skir\Runtime\Variant;
-use Skir\Server\ProcedureRegistry;
-use Skir\Server\SkirServer;
 use Skir\Server\Studio\StudioRenderer;
 use Skir\Server\Tests\TestCase;
 
 final class StudioRendererTest extends TestCase
 {
     #[Test]
-    public function it_renders_an_empty_state_when_no_procedures_are_registered(): void
+    public function it_serves_the_official_studio_app(): void
     {
-        Route::skirRpc('/empty-studio')->studio();
+        Route::skirRpc('/studio')->studio();
 
         $this
-            ->get('/empty-studio?studio')
+            ->get('/studio?studio')
             ->assertOk()
-            ->assertSee('No Skir procedures are registered for this endpoint.');
+            ->assertHeader('content-type', 'text/html; charset=UTF-8')
+            ->assertSee('<skir-studio-app></skir-studio-app>', escape: false)
+            ->assertSee('<script src="https://cdn.jsdelivr.net/npm/skir-studio/dist/skir-studio-standalone.js"></script>', escape: false);
+    }
+
+    #[Test]
+    public function the_studio_app_script_is_configurable(): void
+    {
+        config(['skir-server.studio_app_js_url' => 'https://assets.example.test/studio.js']);
+        Route::skirRpc('/self-hosted-studio')->studio();
+
+        $this
+            ->get('/self-hosted-studio?studio')
+            ->assertOk()
+            ->assertSee('<script src="https://assets.example.test/studio.js"></script>', escape: false);
     }
 
     #[Test]
@@ -41,118 +49,11 @@ final class StudioRendererTest extends TestCase
     }
 
     #[Test]
-    public function it_serializes_nested_type_metadata(): void
+    public function it_escapes_the_app_script_url(): void
     {
-        $server = new SkirServer(new ProcedureRegistry);
-        $server->addMethod($this->complexDescriptor(), fn (array $request): array => $request);
+        $html = app(StudioRenderer::class)->render('https://example.test/studio.js"></script><script>alert(1)</script>');
 
-        $metadata = $this->metadataFromHtml(app(StudioRenderer::class)->render($server, '/skir'));
-
-        $this->assertSame([
-            'endpoint' => '/skir',
-            'methods' => [[
-                'name' => 'ComplexMethod',
-                'number' => 7001,
-                'request' => [
-                    'kind' => 'struct',
-                    'fields' => [
-                        [
-                            'name' => 'items',
-                            'number' => 0,
-                            'removed' => false,
-                            'type' => [
-                                'kind' => 'array',
-                                'item' => ['kind' => 'string'],
-                            ],
-                        ],
-                        [
-                            'name' => null,
-                            'number' => 1,
-                            'removed' => true,
-                        ],
-                        [
-                            'name' => 'choice',
-                            'number' => 2,
-                            'removed' => false,
-                            'type' => [
-                                'kind' => 'enum',
-                                'variants' => [
-                                    [
-                                        'name' => 'None',
-                                        'number' => 0,
-                                    ],
-                                    [
-                                        'name' => 'Value',
-                                        'number' => 1,
-                                        'payload' => ['kind' => 'int32'],
-                                    ],
-                                ],
-                            ],
-                        ],
-                    ],
-                ],
-                'response' => [
-                    'kind' => 'optional',
-                    'item' => ['kind' => 'bytes'],
-                ],
-            ]],
-        ], $metadata);
-    }
-
-    #[Test]
-    public function it_escapes_endpoint_and_method_names(): void
-    {
-        $server = new SkirServer(new ProcedureRegistry);
-        $server->addMethod(
-            new MethodDescriptor('<script>method</script>', 7002, Type::string(), Type::string()),
-            fn (string $request): string => $request,
-        );
-
-        $html = app(StudioRenderer::class)->render($server, '/<script>endpoint</script>');
-        $metadata = $this->metadataFromHtml($html);
-
-        $this->assertStringNotContainsString('<script>method</script>', $html);
-        $this->assertStringNotContainsString('/<script>endpoint</script>', $html);
-        $this->assertStringContainsString('&lt;script&gt;method&lt;/script&gt;', $html);
-        $this->assertStringContainsString('/&lt;script&gt;endpoint&lt;/script&gt;', $html);
-        $this->assertSame('<script>method</script>', $metadata['methods'][0]['name']);
-        $this->assertSame('/<script>endpoint</script>', $metadata['endpoint']);
-    }
-
-    private function complexDescriptor(): MethodDescriptor
-    {
-        return new MethodDescriptor(
-            'ComplexMethod',
-            7001,
-            Type::struct([
-                Field::value('items', 0, Type::array(Type::string())),
-                Field::removed(1),
-                Field::value('choice', 2, Type::enum([
-                    Variant::constant('None', 0),
-                    Variant::wrapper('Value', 1, Type::int32()),
-                ])),
-            ]),
-            Type::optional(Type::bytes()),
-        );
-    }
-
-    /**
-     * @return array{
-     *     endpoint: string,
-     *     methods: array<int, array<string, mixed>>
-     * }
-     */
-    private function metadataFromHtml(string $html): array
-    {
-        $matched = preg_match('/data-skir-studio="([^"]*)"/', $html, $matches);
-
-        $this->assertSame(1, $matched);
-
-        $json = html_entity_decode($matches[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $metadata = json_decode($json, true, flags: JSON_THROW_ON_ERROR);
-
-        $this->assertIsArray($metadata);
-
-        return $metadata;
+        $this->assertStringNotContainsString('<script>alert(1)</script>', $html);
+        $this->assertStringContainsString('&quot;&gt;&lt;/script&gt;', $html);
     }
 }

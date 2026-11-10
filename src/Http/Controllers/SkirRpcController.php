@@ -19,14 +19,18 @@ use Skir\Server\PreparedProcedure;
 use Skir\Server\RegisteredProcedure;
 use Skir\Server\Routing\SkirEndpointRegistry;
 use Skir\Server\SkirContext;
+use Skir\Server\Studio\MethodList;
 use Skir\Server\Studio\StudioRenderer;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class SkirRpcController
 {
+    private const string STUDIO_APP_JS_URL = 'https://cdn.jsdelivr.net/npm/skir-studio/dist/skir-studio-standalone.js';
+
     public function __construct(
         private SkirEndpointRegistry $endpoints,
         private StudioRenderer $studioRenderer,
+        private MethodList $methodList,
         private Container $container,
         private SkirMethodRequestScope $requestScope,
         private Router $router,
@@ -37,13 +41,21 @@ final readonly class SkirRpcController
         try {
             $server = $this->endpoints->server($request->route());
 
+            if ($this->isMethodListRequest($request)) {
+                if (! $this->studioEnabled($request)) {
+                    abort(Response::HTTP_NOT_FOUND);
+                }
+
+                return response()->json($this->methodList->toArray($server));
+            }
+
             if ($this->isStudioRequest($request)) {
                 if (! $this->studioEnabled($request)) {
                     abort(Response::HTTP_NOT_FOUND);
                 }
 
                 return response(
-                    $this->studioRenderer->render($server, '/'.$request->path()),
+                    $this->studioRenderer->render((string) config('skir-server.studio_app_js_url', self::STUDIO_APP_JS_URL)),
                     Response::HTTP_OK,
                 )->header('content-type', 'text/html; charset=UTF-8');
             }
@@ -107,6 +119,15 @@ final readonly class SkirRpcController
         }
 
         return $prepared->middleware;
+    }
+
+    private function isMethodListRequest(Request $request): bool
+    {
+        if (! $this->usesQueryString($request)) {
+            return false;
+        }
+
+        return $this->rpcBody($request) === 'list';
     }
 
     private function isStudioRequest(Request $request): bool

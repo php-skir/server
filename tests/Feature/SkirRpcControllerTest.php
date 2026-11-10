@@ -237,10 +237,12 @@ final class SkirRpcControllerTest extends TestCase
             ->get('/studio-rpc?studio')
             ->assertOk()
             ->assertHeader('content-type', 'text/html; charset=UTF-8')
-            ->assertSee('Skir RPC Studio')
-            ->assertSee('Square')
-            ->assertSee('Double')
-            ->assertSee('/studio-rpc');
+            ->assertSee('skir-studio-app');
+
+        $this
+            ->get('/studio-rpc?list')
+            ->assertOk()
+            ->assertJsonPath('methods.*.method', ['Square', 'Double']);
     }
 
     #[Test]
@@ -372,7 +374,7 @@ final class SkirRpcControllerTest extends TestCase
         ])->studio();
 
         $this
-            ->get('/controller-studio-rpc?studio')
+            ->get('/controller-studio-rpc?list')
             ->assertOk()
             ->assertSee('Double')
             ->assertSee('RenameUser')
