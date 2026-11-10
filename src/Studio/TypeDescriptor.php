@@ -14,8 +14,9 @@ use Skir\Runtime\Variant;
  * Describes a runtime type in the JSON format of Skir's type descriptors: a type signature plus the
  * definition of every struct and enum it refers to.
  *
- * Runtime types carry no record names, so names are derived: the root is named by the caller, and a nested
- * record is named after the field or variant that holds it. Records with the same shape share one definition.
+ * A record is identified by the id its generator gave it. Types built without one get a derived name: the
+ * root is named by the caller, a nested record after the field or variant that holds it, and records with
+ * the same shape share one definition.
  */
 final class TypeDescriptor
 {
@@ -69,6 +70,10 @@ final class TypeDescriptor
 
     private function recordId(Type $type, string $name): string
     {
+        if ($type->recordId !== null) {
+            return $this->namedRecordId($type, $type->recordId);
+        }
+
         $shape = serialize($type);
 
         if (isset($this->recordIdsByShape[$shape])) {
@@ -79,6 +84,20 @@ final class TypeDescriptor
 
         // Registered before its fields are described, so the definitions come out parent first.
         $this->recordIdsByShape[$shape] = $recordId;
+        $this->records[$recordId] = [];
+        $this->records[$recordId] = $type->kind === TypeKind::Struct
+            ? $this->structDefinition($type, $recordId)
+            : $this->enumDefinition($type, $recordId);
+
+        return $recordId;
+    }
+
+    private function namedRecordId(Type $type, string $recordId): string
+    {
+        if (isset($this->records[$recordId])) {
+            return $recordId;
+        }
+
         $this->records[$recordId] = [];
         $this->records[$recordId] = $type->kind === TypeKind::Struct
             ? $this->structDefinition($type, $recordId)
@@ -117,11 +136,11 @@ final class TypeDescriptor
             $fields[] = $this->fieldDefinition($field);
         }
 
-        $definition = [
+        $definition = $this->withDoc([
             'kind' => 'struct',
             'id' => $recordId,
             'fields' => $fields,
-        ];
+        ], $type->doc);
 
         if ($removedNumbers !== []) {
             $definition['removed_numbers'] = $removedNumbers;
@@ -135,11 +154,11 @@ final class TypeDescriptor
     {
         $name = (string) $field->name;
 
-        return [
+        return $this->withDoc([
             'name' => $name,
             'number' => $field->number,
             'type' => $this->signature($field->type ?? Type::bool(), $name),
-        ];
+        ], $field->doc);
     }
 
     /** @return array<string, mixed> */
@@ -156,26 +175,43 @@ final class TypeDescriptor
             $variants[] = $this->variantDefinition($variant);
         }
 
-        return [
+        return $this->withDoc([
             'kind' => 'enum',
             'id' => $recordId,
             'variants' => $variants,
-        ];
+        ], $type->doc);
     }
 
     /** @return array<string, mixed> */
     private function variantDefinition(Variant $variant): array
     {
-        $definition = [
+        $definition = $this->withDoc([
             'name' => $variant->name,
             'number' => $variant->number,
-        ];
+        ], $variant->doc);
 
         if ($variant->payloadType !== null) {
             $definition['type'] = $this->signature($variant->payloadType, $variant->name);
         }
 
         return $definition;
+    }
+
+    /**
+     * @param  array<string, mixed>  $definition
+     * @return array<string, mixed>
+     */
+    private function withDoc(array $definition, ?string $doc): array
+    {
+        if ($doc === null) {
+            return $definition;
+        }
+
+        if ($doc === '') {
+            return $definition;
+        }
+
+        return [...$definition, 'doc' => $doc];
     }
 
     private function itemType(Type $type): Type

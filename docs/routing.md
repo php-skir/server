@@ -338,7 +338,7 @@ Calling `studio()` explicitly enables Studio for that endpoint, regardless of `s
 
 The Studio app reads the endpoint's methods from a GET request to `/api/skir?list`. The answer follows the upstream Skir services: every method with its name, number, and the type descriptors of its request and response. The list is available only while Studio is enabled for the endpoint; otherwise it answers `404`.
 
-The PHP runtime types carry no record names, so the names in the list are derived. A method's request and response are named `<Method>Request` and `<Method>Response`, and a nested struct or enum is named after the field or variant that holds it. Structs and enums with the same shape share one definition. These names only label the Studio forms; they do not affect the wire format.
+Records are listed under the name the schema gives them, with their doc comments, when the generated types carry that information: regenerate with a generator built on `@php-skir/generator-core` 0.3 or later. Types without it get derived names: a method's request and response are named `<Method>Request` and `<Method>Response`, a nested struct or enum is named after the field or variant that holds it, and structs and enums with the same shape share one definition. Names only label the Studio forms; they do not affect the wire format.
 
 Studio sends its calls from the browser as `{"method": ..., "request": ...}` POST requests, with the `Authorization` header you enter in the app. Outer route middleware applies to the Studio page, the method list, and every call.
 

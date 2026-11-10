@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Skir\Server\Studio;
 
+use Skir\Runtime\MethodDescriptor;
 use Skir\Server\RegisteredProcedure;
 use Skir\Server\SkirServer;
 
@@ -16,7 +17,8 @@ final class MethodList
      *         method: string,
      *         number: int,
      *         request: array<string, mixed>,
-     *         response: array<string, mixed>
+     *         response: array<string, mixed>,
+     *         doc?: string
      *     }>
      * }
      */
@@ -24,20 +26,38 @@ final class MethodList
     {
         return [
             'methods' => array_values(array_map(
-                fn (RegisteredProcedure $procedure): array => [
-                    'method' => $procedure->descriptor->name,
-                    'number' => $procedure->descriptor->number,
-                    'request' => (new TypeDescriptor)->describe(
-                        $procedure->descriptor->requestType,
-                        "{$procedure->descriptor->name}Request",
-                    ),
-                    'response' => (new TypeDescriptor)->describe(
-                        $procedure->descriptor->responseType,
-                        "{$procedure->descriptor->name}Response",
-                    ),
-                ],
+                fn (RegisteredProcedure $procedure): array => $this->method($procedure->descriptor),
                 $server->procedures(),
             )),
         ];
+    }
+
+    /**
+     * @return array{
+     *     method: string,
+     *     number: int,
+     *     request: array<string, mixed>,
+     *     response: array<string, mixed>,
+     *     doc?: string
+     * }
+     */
+    private function method(MethodDescriptor $descriptor): array
+    {
+        $method = [
+            'method' => $descriptor->name,
+            'number' => $descriptor->number,
+            'request' => (new TypeDescriptor)->describe($descriptor->requestType, "{$descriptor->name}Request"),
+            'response' => (new TypeDescriptor)->describe($descriptor->responseType, "{$descriptor->name}Response"),
+        ];
+
+        if ($descriptor->doc === null) {
+            return $method;
+        }
+
+        if ($descriptor->doc === '') {
+            return $method;
+        }
+
+        return [...$method, 'doc' => $descriptor->doc];
     }
 }

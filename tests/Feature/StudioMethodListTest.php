@@ -152,6 +152,66 @@ final class StudioMethodListTest extends TestCase
         );
     }
 
+    #[Test]
+    public function it_uses_the_schema_names_and_doc_comments_when_types_carry_them(): void
+    {
+        $status = Type::enum(
+            [Variant::constant('pending', 1, doc: 'Not answered yet.'), Variant::constant('accepted', 2)],
+            recordId: 'invitations/invitations.skir:Invitation.Status',
+            doc: 'Where an invitation stands.',
+        );
+        $invitation = Type::struct(
+            [
+                Field::value('status', 0, $status, doc: 'Changes when the invitee answers.'),
+                Field::value('previous_status', 1, $status),
+            ],
+            recordId: 'invitations/invitations.skir:Invitation',
+            doc: 'One invitation.',
+        );
+
+        $server = new SkirServer(new ProcedureRegistry);
+        $server->addMethod(
+            new MethodDescriptor('GetInvitation', 7003, Type::string(), $invitation, doc: 'Looks up an invitation.'),
+            fn (string $request): array => [],
+        );
+
+        $method = (new MethodList)->toArray($server)['methods'][0];
+
+        $this->assertSame('Looks up an invitation.', $method['doc']);
+        $this->assertSame([
+            'type' => ['kind' => 'record', 'value' => 'invitations/invitations.skir:Invitation'],
+            'records' => [
+                [
+                    'kind' => 'struct',
+                    'id' => 'invitations/invitations.skir:Invitation',
+                    'fields' => [
+                        [
+                            'name' => 'status',
+                            'number' => 0,
+                            'type' => ['kind' => 'record', 'value' => 'invitations/invitations.skir:Invitation.Status'],
+                            'doc' => 'Changes when the invitee answers.',
+                        ],
+                        [
+                            'name' => 'previous_status',
+                            'number' => 1,
+                            'type' => ['kind' => 'record', 'value' => 'invitations/invitations.skir:Invitation.Status'],
+                        ],
+                    ],
+                    'doc' => 'One invitation.',
+                ],
+                [
+                    'kind' => 'enum',
+                    'id' => 'invitations/invitations.skir:Invitation.Status',
+                    'variants' => [
+                        ['name' => 'pending', 'number' => 1, 'doc' => 'Not answered yet.'],
+                        ['name' => 'accepted', 'number' => 2],
+                    ],
+                    'doc' => 'Where an invitation stands.',
+                ],
+            ],
+        ], $method['response']);
+    }
+
     private function inviteDescriptor(): MethodDescriptor
     {
         return new MethodDescriptor(
