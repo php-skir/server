@@ -24,7 +24,7 @@
         "php": "^8.4",
         "laravel/framework": "^13.0",
         "nikic/php-parser": "^5.8",
-        "php-skir/runtime": "^0.2@dev",
+        "php-skir/runtime": "^0.2.1@dev",
         "symfony/process": "^7.4|^8.0"
     },
     "require-dev": {
